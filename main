@@ -1,0 +1,25 @@
+import dns.resolver
+import time
+
+server = input("DNS 서버 주소를 입력하세요 (예: 8.8.8.8): ")
+domain = input("도메인 이름을 입력하세요 (예: ticket.melon.com): ")
+count = int(input("질의 횟수를 입력하세요 (예: 5): "))
+
+resolver = dns.resolver.Resolver()
+resolver.nameservers = [server]
+
+times = []
+for i in range(count):
+    start = time.time()
+    try:
+        resolver.resolve(domain)
+        elapsed = (time.time() - start) * 1000
+        times.append(elapsed)
+        print(f"{domain}: query time = {elapsed:.2f} ms")
+    except Exception as e:
+        print(f"{domain}: failed ({e})")
+        times.append(float('inf'))
+
+if times:
+    avg = sum(times) / len(times)
+    print(f"\n✅ 평균 응답 시간: {avg:.2f} ms")

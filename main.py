@@ -1,4 +1,5 @@
 # main.py
+#수정 1
 import gui
 
 if __name__ == "__main__":

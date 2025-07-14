@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import time, json
-import dns.resolver
+from urllib.parse import urlparse
+import time, dns.resolver
 
 app = FastAPI() # API 객체 생성
 
@@ -14,8 +13,13 @@ dns_servers =  { # DNS 서버 IP 목록
     "Kakao" : "203.248.252.2",
 }
 
-@app.get("/dns/{domain}") # domain 입력받기 > 예 : localhost.8000/dns/naver.com 네이버로
-def read_root(domain: str):
+@app.get("/dns/{full_path:path}") # domain 입력받기 > 예 : localhost.8000/dns/naver.com
+def read_root(full_path: str):
+    parsed = urlparse(full_path if full_path.startswith("http") else "https://" + full_path)
+    domain = parsed.netloc
+    if not domain:
+        raise HTTPException(status_code=400, detail="유효한 도메인을 입력해주세요.")
+    
     result_all = [] 
     result_response = [] 
     for name, ip in dns_servers.items():

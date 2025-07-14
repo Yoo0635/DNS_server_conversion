@@ -1,7 +1,10 @@
-# main.py
-#수정 1
-import gui
+from tkinter import *
+win = TK() # 창 생성
 
-if __name__ == "__main__":
-    app = gui.TicketApp() # gui.py에서 정의한 TicketApp 클래스 인스턴스 생성
-    app.run() # 앱 실행
+win.geometry("1000 x 500")
+win.title("temp")
+win.option_add("*Font", "맑은고딕 25")
+
+btn = Button(win, text = "버튼")
+
+win.mainloop() # 창 실행

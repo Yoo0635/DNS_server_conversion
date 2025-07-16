@@ -29,6 +29,7 @@ def validate_domain(domain: str) -> tuple[bool, str]:
     if not can_resolve_dns(domain):
         return False, "DNS 서버에서 해당 도메인에 응답하지 않습니다. (408 Timeout)"
     
-    return True, "도메인이 정상적으로 통과되었습니다."
+    return True, "도메인이 정상적으로 통과되었습니다." 
+    #커밋이 이상해
 
 

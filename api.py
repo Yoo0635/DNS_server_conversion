@@ -1,3 +1,6 @@
+import re
+import socket
+
 def is_not_empty(domain: str) -> bool:
     return bool(domain and domain.strip())
 

@@ -31,5 +31,4 @@ def validate_domain(domain: str) -> tuple[bool, str]:
     
     return True, "도메인이 정상적으로 통과되었습니다."
 
-    #DNS 확인용 보안코드
 

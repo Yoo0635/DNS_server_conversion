@@ -39,7 +39,7 @@ def read_root(full_path: str):
     min_server_name = None
     min_response = min(result_response)
     for item in result_all:
-        if float(item["응답 시간"].replace(" + ms", "")) == min_response:
+        if float(item["응답 시간"].replace("ms", "")) == min_response:
             min_server_name = item["DNS 서버"]
     
     result_final = {

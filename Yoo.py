@@ -46,7 +46,7 @@ def read_root(full_path: str):
         "도메인" : domain,
         "전체 결과" : result_all,
         "최소 응답 서버" : min_server_name,
-        "응답 시간" : f"{min_response} ms"
+        "응답 시간" : f"{min_response} ms" 
     }
 
     return result_final

@@ -15,9 +15,9 @@ dns_servers =  { # DNS 서버 IP 목록
 
 @app.get("/dns/{full_path:path}") # domain 입력받기 > 예 : localhost.8000/dns/naver.com
 def read_root(full_path: str):
-    parsed = urlparse(full_path if full_path.startswith("http") else "https://" + full_path)
-    domain = parsed.netloc
-    if not domain:
+    parsed = urlparse(full_path if full_path.startswith("http") else "https://" + full_path) #url쪼개기 http있는지 확인
+    domain = parsed.netloc #netloc부분 쪼개서 도메인으로 저장
+    if not domain: #도메인 없으면 raise로 에러
         raise HTTPException(status_code=400, detail="유효한 도메인을 입력해주세요.")
     
     result_all = [] 
@@ -26,6 +26,10 @@ def read_root(full_path: str):
     for name, ip in dns_servers.items():
         tester = dns.resolver.Resolver()
         tester.nameservers = [ip]
+
+
+
+        
         start_time = time.time()
         answer = tester.resolve(domain, 'A')
         end_time = time.time()

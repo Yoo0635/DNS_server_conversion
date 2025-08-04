@@ -44,7 +44,7 @@ def reset_dns(): # DNS 리셋
     os_name = platform.system()
     if(os_name == "Windows"):
         adapter = detect_adapter_win()
-        command = f'netsh interface ip set dns name= "{adapter}" dhcp'
+        command = f'netsh interface ip set dns name="{adapter}" dhcp'
     elif(os_name == "Darwin"):
         adapter = detect_adapter_mac()
         command = f'networksetup -setdnsservers "{adapter}" Empty'

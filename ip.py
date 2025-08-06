@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query, HTTPException
 import dns.resolver
 import time
 import socket
+import pandas as pd
 
 app = FastAPI()
 
@@ -28,6 +29,9 @@ def get_ip(domain: str = Query(...)):
             results.append({"ip": ip, "응답속도": float('inf')})
 
     fast = min(results, key=lambda x: x["응답속도"])
+
+    df = pd.DataFrame(results)
+    df.to_csv("ip_응답속도_결과.csv", mode='a', index=False, header=not pd.io.common.file_exists("ip_응답속도_결과.csv"), encoding='utf-8-sig')
 
     return {
         "도메인": domain,

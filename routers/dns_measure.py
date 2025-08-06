@@ -33,7 +33,7 @@ def measure_dns(domain: str = Query(...), count: int = Query(5, gt=0)):
             "평균 응답 시간(ms)": avg
         })   
 
-    df = pd.DataFrame(records)
+    df = pd.DataFrame(records) # pandas 
     df.to_csv("dns_응답속도_결과.csv", mode='a', index=False, header=not pd.io.common.file_exists("dns_응답속도_결과.csv"), encoding='utf-8-sig')
 
     return {

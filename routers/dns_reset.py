@@ -14,3 +14,4 @@ def reset_dns_api():
         return{
             "message" : "DNS 리셋 실패"
         } 
+    

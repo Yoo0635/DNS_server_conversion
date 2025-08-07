@@ -10,3 +10,4 @@ app.include_router(dns_measure)
 app.include_router(dns_apply)
 app.include_router(dns_reset)
 app.include_router(dns_check)
+# 인식 수정필요

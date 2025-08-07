@@ -1,5 +1,9 @@
+from fastapi import APIRouter, Request, Query
+from fastapi.responses import JSONResponse
 import re
 import socket
+
+router = APIRouter()
 
 def is_not_empty(domain: str) -> bool:
     return bool(domain and domain.strip())
@@ -32,7 +36,19 @@ def validate_domain(domain: str) -> tuple[bool, str]:
     if not can_resolve_dns(domain):
         return False, "DNS 서버에서 해당 도메인에 응답하지 않습니다. (408 Timeout)"
     
-    return True, "도메인이 정상적으로 통과되었습니다." 
-    #커밋이 이상해
+    return True, "도메인이 정상적으로 통과되었습니다."
 
-
+@router.get("/validate") #FASTAPI 요청 처리
+async def validate_dns_route(domain: str = Query(...), request: Request = None):
+    ok, message = validate_domain(domain)
+    
+    if not ok:
+        status_code = (
+            400 if "도메인이 입력되지 않았습니다" in message else
+            422 if "도메인 형식이 잘못되었습니다." in message or "도메인에 스크립트 또는 위험한 문자가 포함되어 있습니다." in message else
+            408 if 	"DNS 서버에서 해당 도메인에 응답하지 않습니다." in message else
+            400 
+        )
+        return JSONResponse(status_code=status_code, content={"detail": message})
+    
+    return {"result": message}

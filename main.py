@@ -1,26 +1,12 @@
-from fastapi import FastAPI, Request
-import logging
+from fastapi import FastAPI
+from codes.routers.dns_measure import router as dns_measure
+from codes.routers.dns_apply import router as dns_apply
+from codes.routers.dns_reset import router as dns_reset
+from codes.routers.dns_check import router as dns_check
 
 app = FastAPI()
 
-logging.basicConfig(
-    filename="audit.log", 
-    level=logging.INFO,           
-    format="%(asctime)s - %(message)s" 
-)
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    ip = request.client.host
-    path = request.url.path 
-    method = request.method  
-
-    response = await call_next(request) 
-
-    logging.info(f"[AUDIT] {ip}에서 {method} 요청 → {path}")
-
-    return response
-
-@app.get("/")
-async def hello():
-    return {"message": "안녕하세요"}
+app.include_router(dns_measure)
+app.include_router(dns_apply)
+app.include_router(dns_reset)
+app.include_router(dns_check)

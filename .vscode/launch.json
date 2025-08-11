@@ -11,7 +11,7 @@
         "--reload"
       ],
       "env": {
-        "PYTHONPATH": "${workspaceFolder}"
+        "PYTHONPATH": "${workspaceFolder}/app"
       },
       "justMyCode": true
     }

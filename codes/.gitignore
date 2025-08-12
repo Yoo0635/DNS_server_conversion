@@ -1,0 +1,25 @@
+# ===== Python 캐시 파일 =====
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ===== 실행 결과 저장 파일 (네가 직접 만든 것 포함) =====
+*.csv
+*.txt
+*.json
+
+# ===== FastAPI 프로젝트에서 생길 수 있는 기타 =====
+*.log
+*.tmp
+*.bak
+
+# ===== 가상환경 =====
+env/
+venv/
+ENV/
+.venv/
+
+# ===== Git 관련 예외 방지 =====
+.gitmodules
+.gitmodules/
+.git/

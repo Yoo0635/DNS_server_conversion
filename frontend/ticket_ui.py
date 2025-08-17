@@ -8,7 +8,6 @@ import threading
 import time
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from backend import api_client
 import queue
 
 class SmartTicketingApp:
@@ -18,7 +17,6 @@ class SmartTicketingApp:
         self.root.geometry("1000x800")
         self.root.configure(bg="#222222")
 
-        # UI 업데이트를 위한 큐 생성
         self.queue = queue.Queue()
         self.root.after(100, self.check_queue)
         
@@ -100,7 +98,9 @@ class SmartTicketingApp:
 
         def run_measurement():
             try:
-                response = requests.get(f"http://127.0.0.1:5000/api/dns_measurements?domain={domain}")
+                # API 주소 수정 부분
+                response = requests.get(f"http://127.0.0.1:8000/measure?domain={domain}&count=5")
+                
                 if response.status_code == 200:
                     data = response.json()
                     self.queue.put(("update_dns_results", data))
@@ -152,9 +152,9 @@ class SmartTicketingApp:
 
 if __name__ == "__main__":
     try:
-        requests.get("http://127.0.0.1:5000")
+        requests.get("http://127.0.0.1:8000")
         root = tk.Tk()
         app = SmartTicketingApp(root)
         root.mainloop()
     except requests.exceptions.ConnectionError:
-        print("백엔드 서버가 실행 중이지 않습니다. 'flask run' 명령어를 실행해 주세요.")
+        print("백엔드 서버가 실행 중이지 않습니다. 'uvicorn main:app --reload' 명령어를 실행해 주세요.")

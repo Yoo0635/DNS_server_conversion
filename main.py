@@ -7,6 +7,7 @@ from codes.routers.dns_apply import router as dns_apply
 from codes.routers.dns_reset import router as dns_reset
 from codes.routers.dns_check import router as dns_check
 from codes.routers.dns_limit import router as dns_limit
+from codes.routers.dns_log import router as dns_log
 
 app = FastAPI()
 
@@ -22,3 +23,4 @@ app.include_router(dns_apply)
 app.include_router(dns_reset)
 app.include_router(dns_check)
 app.include_router(dns_limit)
+app.include_router(dns_log, prefix="/dns_log")

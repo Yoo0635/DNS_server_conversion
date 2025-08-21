@@ -4,7 +4,7 @@ from codes.dns_servers import dns_servers
 
 router = APIRouter()
 
-@router.get("/apply")
+@router.post("/apply")
 def dns_apply(server : str = Query(...)):
     if server not in dns_servers:
         raise HTTPException(status_code=400, detail="지원되지 않는 DNS 서버입니다.")

@@ -3,7 +3,7 @@ from codes.auto_dns import reset_dns
 
 router = APIRouter()
 
-@router.get("/reset")
+@router.post("/reset")
 def reset_dns_api():
     try:
         reset_dns()

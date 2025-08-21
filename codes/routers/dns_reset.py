@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from codes.auto_dns import reset_dns
+from codes.dns_auto import reset_dns
 
 router = APIRouter()
 

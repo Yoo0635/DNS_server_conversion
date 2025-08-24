@@ -1,15 +1,13 @@
-from fastapi import HTTPException, APIRouter
+from fastapi import APIRouter
 from codes.dns_auto import set_dns
 from codes.dns_servers import dns_servers
-from codes.schemas.dns_model import DNSRequest
+from codes.schemas.dns_model import dnsIpRequest
 
 router = APIRouter()
 
 @router.post("/apply")
-def dns_apply(request : DNSRequest):
-    server = request.server.strip()
-    if server not in dns_servers:
-        raise HTTPException(status_code=400, detail="지원되지 않는 DNS 서버입니다.")
+def dns_apply(request: dnsIpRequest):
+    server = str(request.ip)
 
     try:
         set_dns(dns_servers[server])

@@ -5,10 +5,16 @@ from tkinter import ttk, scrolledtext
 import requests
 import json
 import threading
-import time
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import queue
+import time
+
+# 우리가 만든 기능 파일들을 가져옵니다. (상대 경로로 수정)
+from .measure_dns import measure_dns, plot_graph
+from .change_dns import change_dns
+from .reset_dns import reset_dns
+from .measure_ip import measure_ip
+from .fix_ip import fix_ip
+from .reset_ip import reset_ip
 
 class SmartTicketingApp:
     def __init__(self, root):
@@ -27,89 +33,81 @@ class SmartTicketingApp:
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(pady=10, expand=True, fill="both")
 
-        self.dns_frame = ttk.Frame(self.notebook)
+        # DNS 프레임과 IP 프레임으로 분리
+        self.dns_frame = ttk.LabelFrame(self.notebook, text="DNS 최적화", padding=15)
+        self.ip_frame = ttk.LabelFrame(self.notebook, text="IP 응답 속도", padding=15)
         self.ticketing_frame = ttk.Frame(self.notebook)
         
         self.notebook.add(self.dns_frame, text="DNS 최적화")
+        self.notebook.add(self.ip_frame, text="IP 응답 속도")
         self.notebook.add(self.ticketing_frame, text="스마트 티켓팅")
 
         # DNS 탭 UI
         self.dns_label = ttk.Label(self.dns_frame, text="DNS 응답 속도 측정", font=("Helvetica", 16))
         self.dns_label.pack(pady=10)
-
         self.domain_entry = ttk.Entry(self.dns_frame, width=40, font=("Helvetica", 12))
         self.domain_entry.insert(0, "google.com")
         self.domain_entry.pack(pady=5)
-
-        self.measure_button = ttk.Button(self.dns_frame, text="DNS 서버 응답 시간 측정", command=self.measure_dns)
-        self.measure_button.pack(pady=10)
+        
+        # DNS 기능 버튼들
+        self.measure_dns_button = ttk.Button(self.dns_frame, text="DNS 측정", command=lambda: measure_dns(self))
+        self.measure_dns_button.pack(pady=5)
+        self.new_dns_entry = ttk.Entry(self.dns_frame, width=40, font=("Helvetica", 12))
+        self.new_dns_entry.insert(0, "새로운 DNS 서버 IP 입력")
+        self.new_dns_entry.pack(pady=5)
+        self.change_dns_button = ttk.Button(self.dns_frame, text="DNS 변경", command=lambda: change_dns(self))
+        self.change_dns_button.pack(pady=5)
+        self.reset_dns_button = ttk.Button(self.dns_frame, text="DNS 초기화", command=lambda: reset_dns(self))
+        self.reset_dns_button.pack(pady=5)
 
         self.dns_result_text = scrolledtext.ScrolledText(self.dns_frame, wrap=tk.WORD, width=70, height=10, font=("Helvetica", 10))
         self.dns_result_text.pack(pady=10, padx=10)
-
-        # 그래프를 담을 프레임 추가
         self.graph_frame = ttk.Frame(self.dns_frame)
         self.graph_frame.pack(pady=10, expand=True, fill="both")
+
+        # IP 탭 UI
+        self.ip_label = ttk.Label(self.ip_frame, text="IP 응답 속도 측정", font=("Helvetica", 16))
+        self.ip_label.pack(pady=10)
+
+        # IP 기능 버튼들
+        self.measure_ip_button = ttk.Button(self.ip_frame, text="IP 응답 속도 측정", command=lambda: measure_ip(self))
+        self.measure_ip_button.pack(pady=5)
+        self.fixed_ip_entry = ttk.Entry(self.ip_frame, width=40, font=("Helvetica", 12))
+        self.fixed_ip_entry.insert(0, "고정할 IP 주소 입력")
+        self.fixed_ip_entry.pack(pady=5)
+        self.fix_ip_button = ttk.Button(self.ip_frame, text="IP 고정", command=lambda: fix_ip(self))
+        self.fix_ip_button.pack(pady=5)
+        self.reset_ip_button = ttk.Button(self.ip_frame, text="IP 초기화", command=lambda: reset_ip(self))
+        self.reset_ip_button.pack(pady=5)
+
+        self.ip_result_text = scrolledtext.ScrolledText(self.ip_frame, wrap=tk.WORD, width=70, height=10, font=("Helvetica", 10))
+        self.ip_result_text.pack(pady=10, padx=10)
 
         # 티켓팅 탭 UI
         self.ticketing_label = ttk.Label(self.ticketing_frame, text="콘서트 티켓 구매", font=("Helvetica", 16))
         self.ticketing_label.pack(pady=10)
-
         self.seat_label = ttk.Label(self.ticketing_frame, text="좌석 선택: A열 15번", font=("Helvetica", 12))
         self.seat_label.pack(pady=5)
-
         self.buy_button = ttk.Button(self.ticketing_frame, text="티켓 구매 (테스트)", command=self.buy_ticket)
         self.buy_button.pack(pady=10)
-
         self.status_label = ttk.Label(self.ticketing_frame, text="상태: 대기 중...", font=("Helvetica", 12), foreground="gray")
         self.status_label.pack(pady=5)
-
         self.result_label = ttk.Label(self.ticketing_frame, text="", font=("Helvetica", 12, "bold"), foreground="green")
         self.result_label.pack(pady=10)
     
-    def plot_graph(self, data):
-        for widget in self.graph_frame.winfo_children():
-            widget.destroy()
+    def buy_ticket(self):
+        self.status_label.config(text="상태: 요청 전송 중...", foreground="yellow")
+        self.result_label.config(text="")
+        
+        def simulate_queue():
+            queue_time = 1
+            for i in range(queue_time):
+                self.status_label.config(text=f"상태: 대기열 {i+1}초...", foreground="orange")
+                time.sleep(1)
+            self.status_label.config(text="상태: 처리 완료", foreground="white")
+            self.result_label.config(text="✅ 티켓 구매 성공!", foreground="green")
 
-        labels = [item.get("DNS 서버") for item in data]
-        values = [item.get("평균 응답 시간(ms)") for item in data]
-
-        fig, ax = plt.subplots(figsize=(8, 4))
-        ax.bar(labels, values, color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'])
-        ax.set_title("DNS 서버별 평균 응답 시간")
-        ax.set_ylabel("응답 시간 (ms)")
-        ax.set_ylim(bottom=0)
-
-        canvas = FigureCanvasTkAgg(fig, master=self.graph_frame)
-        canvas_widget = canvas.get_tk_widget()
-        canvas_widget.pack(expand=True, fill="both")
-        canvas.draw()
-    
-    def measure_dns(self):
-        self.dns_result_text.delete(1.0, tk.END)
-        self.dns_result_text.insert(tk.END, "측정 중...\n")
-        self.measure_button.config(state=tk.DISABLED)
-
-        domain = self.domain_entry.get()
-        if not domain:
-            self.dns_result_text.insert(tk.END, "도메인을 입력하세요.")
-            self.measure_button.config(state=tk.NORMAL)
-            return
-
-        def run_measurement():
-            try:
-                # API 주소 수정 부분
-                response = requests.get(f"http://127.0.0.1:8000/measure?domain={domain}&count=5")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    self.queue.put(("update_dns_results", data))
-                else:
-                    self.queue.put(("error", f"백엔드 서버 오류: {response.status_code}"))
-            except requests.exceptions.ConnectionError:
-                self.queue.put(("error", "오류: 백엔드 서버가 실행 중이지 않습니다."))
-
-        threading.Thread(target=run_measurement).start()
+        threading.Thread(target=simulate_queue).start()
 
     def check_queue(self):
         try:
@@ -125,30 +123,18 @@ class SmartTicketingApp:
                             self.dns_result_text.insert(tk.END, f"[{dns_server}] 응답 시간: {latency:.2f} ms\n")
                         else:
                             self.dns_result_text.insert(tk.END, f"[{dns_server}] 응답 시간: 실패\n")
-                    self.plot_graph(results)
-                    self.measure_button.config(state=tk.NORMAL)
+                    plot_graph(self, results) 
+                    # 아래 버튼 이름을 올바르게 수정합니다.
+                    self.measure_dns_button.config(state=tk.NORMAL)
                 elif task == "error":
                     self.dns_result_text.insert(tk.END, data)
-                    self.measure_button.config(state=tk.NORMAL)
+                    # 아래 버튼 이름을 올바르게 수정합니다.
+                    self.measure_dns_button.config(state=tk.NORMAL)
                 self.root.update_idletasks()
         except queue.Empty:
             pass
         finally:
             self.root.after(100, self.check_queue)
-
-    def buy_ticket(self):
-        self.status_label.config(text="상태: 요청 전송 중...", foreground="yellow")
-        self.result_label.config(text="")
-        
-        def simulate_queue():
-            queue_time = 1
-            for i in range(queue_time):
-                self.status_label.config(text=f"상태: 대기열 {i+1}초...", foreground="orange")
-                time.sleep(1)
-            self.status_label.config(text="상태: 처리 완료", foreground="white")
-            self.result_label.config(text="✅ 티켓 구매 성공!", foreground="green")
-
-        threading.Thread(target=simulate_queue).start()
 
 if __name__ == "__main__":
     try:

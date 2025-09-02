@@ -23,3 +23,6 @@ ENV/
 .gitmodules
 .gitmodules/
 .git/
+
+# ===== MacOS ======
+.DS_Store

@@ -25,6 +25,8 @@ def detect_adapter_mac(): # mac 어댑터 탐지
     raise Exception("Mac 어댑터 이름을 찾을 수 없습니다.")
 
 def set_dns(dns_ip : str): # DNS 설정
+    if not dns_ip:
+        raise ValueError("DNS IP가 None입니다.")
     os_name = platform.system() 
     if(os_name == "Windows"):
         adapter = detect_adapter_win()

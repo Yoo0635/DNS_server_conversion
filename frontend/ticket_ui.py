@@ -12,9 +12,16 @@ import time
 from .measure_dns import measure_dns, plot_graph
 from .change_dns import change_dns
 from .reset_dns import reset_dns
-from .measure_ip import measure_ip
-from .fix_ip import fix_ip
-from .reset_ip import reset_ip
+
+# backend/dns_servers.py의 서버 목록을 가져와야 합니다.
+# 현재 DNS 이름 변환을 위해 임시로 여기에 복사해서 사용합니다.
+dns_servers = {
+    "Google": "8.8.8.8",
+    "KT": "168.126.63.1",
+    "SKB": "219.250.36.130",
+    "LGU+": "164.124.101.2",
+    "KISA": "203.248.252.2"
+}
 
 class SmartTicketingApp:
     def __init__(self, root):
@@ -27,6 +34,11 @@ class SmartTicketingApp:
         self.root.after(100, self.check_queue)
         
         self.create_widgets()
+        
+        # 앱 시작 시 현재 DNS 상태를 가져옵니다.
+        self.get_current_dns()
+        # 콤보박스에 선택된 IP를 저장하기 위한 변수
+        self.selected_dns_ip = None
 
     def create_widgets(self):
         # UI 레이아웃
@@ -49,12 +61,23 @@ class SmartTicketingApp:
         self.domain_entry.insert(0, "google.com")
         self.domain_entry.pack(pady=5)
         
+        # 현재 DNS 상태를 표시할 라벨 추가
+        self.current_dns_label = ttk.Label(self.dns_frame, text="현재 DNS: 불러오는 중...", font=("Helvetica", 12, "bold"), foreground="gray")
+        self.current_dns_label.pack(pady=5)
+        
         # DNS 기능 버튼들
         self.measure_dns_button = ttk.Button(self.dns_frame, text="DNS 측정", command=lambda: measure_dns(self))
         self.measure_dns_button.pack(pady=5)
-        self.new_dns_entry = ttk.Entry(self.dns_frame, width=40, font=("Helvetica", 12))
-        self.new_dns_entry.insert(0, "새로운 DNS 서버 IP 입력")
-        self.new_dns_entry.pack(pady=5)
+        
+        # 변경할 DNS 서버를 선택할 콤보박스 추가
+        self.dns_choice_label = ttk.Label(self.dns_frame, text="변경할 DNS 서버 선택:", font=("Helvetica", 12))
+        self.dns_choice_label.pack(pady=(15, 5))
+        self.dns_combobox = ttk.Combobox(self.dns_frame, width=37, font=("Helvetica", 12), state="readonly")
+        self.dns_combobox.pack(pady=5)
+
+        # 콤보박스에서 항목을 선택했을 때 IP를 저장하는 함수 연결
+        self.dns_combobox.bind("<<ComboboxSelected>>", self.on_dns_selected)
+
         self.change_dns_button = ttk.Button(self.dns_frame, text="DNS 변경", command=lambda: change_dns(self))
         self.change_dns_button.pack(pady=5)
         self.reset_dns_button = ttk.Button(self.dns_frame, text="DNS 초기화", command=lambda: reset_dns(self))
@@ -70,14 +93,14 @@ class SmartTicketingApp:
         self.ip_label.pack(pady=10)
 
         # IP 기능 버튼들
-        self.measure_ip_button = ttk.Button(self.ip_frame, text="IP 응답 속도 측정", command=lambda: measure_ip(self))
+        self.measure_ip_button = ttk.Button(self.ip_frame, text="IP 응답 속도 측정", command=lambda: self.measure_ip())
         self.measure_ip_button.pack(pady=5)
         self.fixed_ip_entry = ttk.Entry(self.ip_frame, width=40, font=("Helvetica", 12))
         self.fixed_ip_entry.insert(0, "고정할 IP 주소 입력")
         self.fixed_ip_entry.pack(pady=5)
-        self.fix_ip_button = ttk.Button(self.ip_frame, text="IP 고정", command=lambda: fix_ip(self))
+        self.fix_ip_button = ttk.Button(self.ip_frame, text="IP 고정", command=lambda: self.fix_ip())
         self.fix_ip_button.pack(pady=5)
-        self.reset_ip_button = ttk.Button(self.ip_frame, text="IP 초기화", command=lambda: reset_ip(self))
+        self.reset_ip_button = ttk.Button(self.ip_frame, text="IP 초기화", command=lambda: self.reset_ip())
         self.reset_ip_button.pack(pady=5)
 
         self.ip_result_text = scrolledtext.ScrolledText(self.ip_frame, wrap=tk.WORD, width=70, height=10, font=("Helvetica", 10))
@@ -95,6 +118,15 @@ class SmartTicketingApp:
         self.result_label = ttk.Label(self.ticketing_frame, text="", font=("Helvetica", 12, "bold"), foreground="green")
         self.result_label.pack(pady=10)
     
+    def on_dns_selected(self, event):
+        # 콤보박스 선택 시 호출, 선택된 이름에 해당하는 IP를 저장
+        selected_name = self.dns_combobox.get()
+        for item in self.last_dns_results:
+            display_text = f"{item['DNS 서버 이름']} ({item['평균 응답 시간(ms)']:.2f}ms)"
+            if display_text == selected_name:
+                self.selected_dns_ip = item['DNS 서버 IP']
+                break
+
     def buy_ticket(self):
         self.status_label.config(text="상태: 요청 전송 중...", foreground="yellow")
         self.result_label.config(text="")
@@ -114,27 +146,77 @@ class SmartTicketingApp:
             while True:
                 task, data = self.queue.get_nowait()
                 if task == "update_dns_results":
-                    results = data.get("결과", [])
+                    self.last_dns_results = data.get("결과", [])
+                    
+                    # 콤보박스에 DNS 서버 목록 업데이트 (이름으로 표시)
+                    dns_options = [f"{item['DNS 서버 이름']} ({item['평균 응답 시간(ms)']:.2f}ms)" for item in self.last_dns_results]
+                    self.dns_combobox['values'] = dns_options
+                    if dns_options:
+                        self.dns_combobox.set(dns_options[0]) # 첫 번째 항목을 기본값으로 설정
+                        self.selected_dns_ip = self.last_dns_results[0]['DNS 서버 IP'] # 첫 번째 IP를 변수에 저장
+                        
                     self.dns_result_text.delete(1.0, tk.END)
-                    for item in results:
-                        dns_server = item.get("DNS 서버")
+                    for item in self.last_dns_results:
+                        dns_name = item.get("DNS 서버 이름")
                         latency = item.get("평균 응답 시간(ms)")
                         if latency is not None:
-                            self.dns_result_text.insert(tk.END, f"[{dns_server}] 응답 시간: {latency:.2f} ms\n")
+                            self.dns_result_text.insert(tk.END, f"[{dns_name}] 응답 시간: {latency:.2f} ms\n")
                         else:
-                            self.dns_result_text.insert(tk.END, f"[{dns_server}] 응답 시간: 실패\n")
-                    plot_graph(self, results) 
-                    # 아래 버튼 이름을 올바르게 수정합니다.
+                            self.dns_result_text.insert(tk.END, f"[{dns_name}] 응답 시간: 실패\n")
+                    plot_graph(self, self.last_dns_results) 
                     self.measure_dns_button.config(state=tk.NORMAL)
+                    
+                elif task == "update_dns_change":
+                    self.dns_result_text.insert(tk.END, data + "\n")
+                    self.change_dns_button.config(state=tk.NORMAL)
+                    self.dns_result_text.see(tk.END) # 스크롤을 맨 아래로 이동
+                    self.get_current_dns() # DNS 변경 후 상태 업데이트
+                    
+                elif task == "update_current_dns":
+                    # IP 주소를 이름으로 변환하여 표시
+                    display_name = data
+                    # 현재 DNS 상태를 표시하는 로직
+                    for name, ip in dns_servers.items():
+                        if ip == data:
+                            display_name = name
+                            break
+                    self.current_dns_label.config(text=f"현재 DNS: {display_name}")
+                    
                 elif task == "error":
-                    self.dns_result_text.insert(tk.END, data)
-                    # 아래 버튼 이름을 올바르게 수정합니다.
+                    self.dns_result_text.insert(tk.END, data + "\n")
                     self.measure_dns_button.config(state=tk.NORMAL)
+                    self.change_dns_button.config(state=tk.NORMAL)
+                    self.dns_result_text.see(tk.END)
+                    
                 self.root.update_idletasks()
         except queue.Empty:
             pass
         finally:
             self.root.after(100, self.check_queue)
+            
+    def get_current_dns(self):
+        def run_get_request():
+            try:
+                response = requests.get("http://127.0.0.1:8000/current-dns")
+                if response.status_code == 200:
+                    data = response.json()
+                    self.queue.put(("update_current_dns", data.get("current_dns")))
+                else:
+                    self.queue.put(("error", f"백엔드 서버 오류: {response.status_code}"))
+            except requests.exceptions.ConnectionError:
+                self.queue.put(("error", "오류: 백엔드 서버가 실행 중이지 않습니다."))
+        
+        threading.Thread(target=run_get_request).start()
+
+    # 아래 함수들은 IP 응답 속도 기능을 위해 남겨둡니다.
+    def measure_ip(self):
+        pass
+
+    def fix_ip(self):
+        pass
+
+    def reset_ip(self):
+        pass
 
 if __name__ == "__main__":
     try:

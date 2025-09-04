@@ -17,7 +17,7 @@ def measure_dns(request: dnsDomainRequests, count: int = Query(5, gt=0)):
 
         times = []
         for i in range(count):
-            try:
+            try: 
                 start = time.time()
                 resolver.resolve(domain, 'A')
                 end = time.time()

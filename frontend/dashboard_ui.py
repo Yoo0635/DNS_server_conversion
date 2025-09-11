@@ -1,107 +1,156 @@
-# frontend/dashboard_ui.py
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFrame, QComboBox, QMessageBox, QSizePolicy
+from PyQt5.QtCore import QThread, pyqtSignal
+import requests
+import json
+import matplotlib.pyplot as plt
 
-import tkinter as tk
-from tkinter import ttk, messagebox
-import threading
-from . import api_client
-from . import graphs
+# 백엔드에서 제공되는 DNS 서버 목록을 하드코딩
+DNS_SERVERS = {
+    "Google": "8.8.8.8",
+    "KT": "168.126.63.1",
+    "SKB": "219.250.36.130",
+    "LGU+": "164.124.101.2",
+    "KISA": "203.248.252.2"
+}
 
-class DashboardUI(tk.Frame):
-    def __init__(self, master=None):
-        super().__init__(master)
-        self.master = master
-        self.pack(fill=tk.BOTH, expand=1)
-        self.create_widgets()
+class Worker(QThread):
+    finished = pyqtSignal(dict)
+    error = pyqtSignal(str)
+    
+    def __init__(self, url, params=None):
+        super().__init__()
+        self.url = url
+        self.params = params
+    
+    def run(self):
+        try:
+            response = requests.get(self.url, params=self.params)
+            response.raise_for_status()
+            self.finished.emit(response.json())
+        except requests.exceptions.RequestException as e:
+            self.error.emit(f"Error: {e}")
+
+class DashboardUI(QWidget):
+    def __init__(self, tab_type, parent_layout, graph_manager):
+        super().__init__()
+        self.tab_type = tab_type
+        self.graph_manager = graph_manager
         
-    def create_widgets(self):
-        # UI 레이아웃을 위한 노트북 위젯 생성
-        self.notebook = ttk.Notebook(self)
-        self.notebook.pack(pady=10, expand=True, fill='both')
-
-        # 첫 번째 탭 (DNS 최적화)
-        self.dns_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.dns_frame, text="DNS 최적화")
-        self.create_dns_tab()
-
-        # 두 번째 탭 (티켓 예매) - 추후 구현
-        self.ticketing_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.ticketing_frame, text="티켓 예매 (미구현)")
-
-    def create_dns_tab(self):
-        # 입력 및 버튼을 위한 프레임
-        input_frame = tk.Frame(self.dns_frame, pady=10)
-        input_frame.pack(fill=tk.X)
-
-        tk.Label(input_frame, text="도메인 입력:", font=('Helvetica', 12)).pack(side=tk.LEFT, padx=10)
-        self.domain_entry = tk.Entry(input_frame, width=30, font=('Helvetica', 12))
-        self.domain_entry.insert(0, "google.com")
-        self.domain_entry.pack(side=tk.LEFT, padx=10)
-
-        # DNS 측정 버튼
-        dns_button = tk.Button(input_frame, text="DNS 서버 응답 시간 측정", command=self.on_dns_measure, font=('Helvetica', 10))
-        dns_button.pack(side=tk.LEFT, padx=5)
-
-        # IP 속도 측정 버튼
-        ip_button = tk.Button(input_frame, text="IP 응답 속도 측정", command=self.on_ip_measure, font=('Helvetica', 10))
-        ip_button.pack(side=tk.LEFT, padx=5)
-
-        # 그래프를 표시할 프레임
-        self.graph_frame = tk.Frame(self.dns_frame)
-        self.graph_frame.pack(fill=tk.BOTH, expand=1)
+        self.main_layout = QVBoxLayout(self)
+        parent_layout.addWidget(self)
         
-        # 상태 메시지 라벨
-        self.status_label = tk.Label(self.dns_frame, text="준비 완료", fg="blue", font=('Helvetica', 12))
-        self.status_label.pack(pady=5)
-
-    def on_dns_measure(self):
-        domain = self.domain_entry.get()
-        if not domain:
-            messagebox.showerror("오류", "도메인을 입력하세요.")
-            return
-
-        self.status_label.config(text="DNS 응답 시간 측정 중...", fg="orange")
-        self.clear_graph_frame()
+        # UI 스타일시트 적용
+        self.setStyleSheet("""
+            QPushButton {
+                min-width: 80px; /* 버튼 최소 너비 설정 */
+                max-width: 120px;
+                padding: 5px 10px;
+            }
+            QComboBox {
+                min-width: 150px;
+            }
+        """)
         
-        # UI가 멈추지 않도록 스레드에서 API 호출
-        threading.Thread(target=self.run_dns_api, args=(domain,)).start()
+        # 도메인 입력 UI
+        self.domain_input_layout = QHBoxLayout()
+        self.domain_label = QLabel("도메인 입력:")
+        self.domain_entry = QLineEdit("ticket.melon.com")
+        self.domain_input_layout.addWidget(self.domain_label)
+        self.domain_input_layout.addWidget(self.domain_entry)
+        self.main_layout.addLayout(self.domain_input_layout)
 
-    def run_dns_api(self, domain):
-        data = api_client.get_dns_measurements(domain)
-        self.master.after(0, self.display_dns_results, data)
-
-    def display_dns_results(self, data):
-        if 'error' in data:
-            self.status_label.config(text="API 호출 실패", fg="red")
-            messagebox.showerror("오류", f"API 호출에 실패했습니다: {data['error']}")
-            return
-        
-        graphs.create_dns_bar_chart(self.graph_frame, data['결과'])
-        self.status_label.config(text="DNS 응답 시간 측정 완료", fg="green")
-
-    def on_ip_measure(self):
-        domain = self.domain_entry.get()
-        if not domain:
-            messagebox.showerror("오류", "도메인을 입력하세요.")
-            return
+        # DNS 서버 선택 및 제어 UI (DNS 탭에만 적용)
+        if self.tab_type == "DNS":
+            self.dns_control_layout = QVBoxLayout()
+            self.dns_combo = QComboBox()
+            self.dns_combo.addItems(DNS_SERVERS.keys())
             
-        self.status_label.config(text="IP 응답 속도 측정 중...", fg="orange")
-        self.clear_graph_frame()
+            self.dns_button_layout = QHBoxLayout()
+            self.change_button = QPushButton("DNS 적용")
+            self.reset_button = QPushButton("DNS 초기화")
+            self.dns_button_layout.addWidget(self.change_button)
+            self.dns_button_layout.addWidget(self.reset_button)
+            
+            self.dns_control_layout.addWidget(self.dns_combo)
+            self.dns_control_layout.addLayout(self.dns_button_layout)
+            self.main_layout.addLayout(self.dns_control_layout)
+            
+            self.change_button.clicked.connect(self.change_dns)
+            self.reset_button.clicked.connect(self.reset_dns)
 
-        threading.Thread(target=self.run_ip_api, args=(domain,)).start()
+        # 주요 버튼 UI (세로로 정렬)
+        self.button_layout = QVBoxLayout()
+        self.measure_button = QPushButton("속도 측정")
+        self.hide_graph_button = QPushButton("그래프 숨기기")
+        self.button_layout.addWidget(self.measure_button)
+        self.button_layout.addWidget(self.hide_graph_button)
+        self.main_layout.addLayout(self.button_layout)
+        
+        # 상태 라벨 및 그래프 프레임
+        self.status_label = QLabel(f"{tab_type} 상태: 대기 중")
+        self.main_layout.addWidget(self.status_label)
+        
+        self.graph_frame = QFrame()
+        self.main_layout.addWidget(self.graph_frame)
+        self.graph_frame_layout = QVBoxLayout(self.graph_frame)
 
-    def run_ip_api(self, domain):
-        data = api_client.get_fastest_ip(domain)
-        self.master.after(0, self.display_ip_results, data)
+        # 시그널 연결
+        self.measure_button.clicked.connect(self.measure_speed)
+        self.hide_graph_button.clicked.connect(self.hide_graph)
+    
+    def measure_speed(self):
+        domain = self.domain_entry.text()
+        url = f"http://127.0.0.1:8000/{'measure' if self.tab_type == 'DNS' else 'ip'}"
+        params = {"domain": domain}
+        if self.tab_type == 'DNS':
+            params['count'] = 5
 
-    def display_ip_results(self, data):
-        if 'error' in data:
-            self.status_label.config(text="API 호출 실패", fg="red")
-            messagebox.showerror("오류", f"API 호출에 실패했습니다: {data['error']}")
-            return
+        self.status_label.setText(f"{self.tab_type} 속도 측정 중...")
+        self.measure_button.setEnabled(False)
+        
+        self.worker = Worker(url, params)
+        if self.tab_type == 'DNS':
+            self.worker.finished.connect(self.on_measure_dns_finished)
+        else:
+            self.worker.finished.connect(self.on_measure_ip_finished)
+        self.worker.error.connect(self.on_error)
+        self.worker.start()
 
-        graphs.create_ip_bar_chart(self.graph_frame, data['전체 결과'])
-        self.status_label.config(text="IP 응답 속도 측정 완료", fg="green")
+    def on_measure_dns_finished(self, data):
+        self.status_label.setText("DNS 속도 측정 완료!")
+        self.measure_button.setEnabled(True)
+        self.graph_manager.plot_dns_graph(data, self.graph_frame_layout)
 
-    def clear_graph_frame(self):
-        for widget in self.graph_frame.winfo_children():
-            widget.destroy()
+    def on_measure_ip_finished(self, data):
+        self.status_label.setText("IP 속도 측정 완료!")
+        self.measure_button.setEnabled(True)
+        self.graph_manager.plot_ip_graph(data, self.graph_frame_layout)
+        
+    def hide_graph(self):
+        self.graph_manager.clear_layout(self.graph_frame_layout)
+        self.status_label.setText("그래프가 숨겨졌습니다.")
+
+    def change_dns(self):
+        selected_dns_name = self.dns_combo.currentText()
+        new_dns_ip = DNS_SERVERS[selected_dns_name]
+        try:
+            url = "http://127.0.0.1:8000/change-dns"
+            payload = {"new_dns": new_dns_ip}
+            response = requests.post(url, json=payload)
+            response.raise_for_status()
+            self.status_label.setText(f"✅ DNS 서버가 {selected_dns_name} ({new_dns_ip})로 변경되었습니다.")
+        except requests.exceptions.RequestException as e:
+            self.status_label.setText(f"❌ DNS 변경 오류: {e}")
+
+    def reset_dns(self):
+        try:
+            url = "http://127.0.0.1:8000/reset-dns"
+            response = requests.post(url)
+            response.raise_for_status()
+            self.status_label.setText("✅ DNS 서버가 기본값으로 초기화되었습니다.")
+        except requests.exceptions.RequestException as e:
+            self.status_label.setText(f"❌ DNS 초기화 오류: {e}")
+            
+    def on_error(self, msg):
+        self.status_label.setText(f"❌ 오류: {msg}")
+        self.measure_button.setEnabled(True)

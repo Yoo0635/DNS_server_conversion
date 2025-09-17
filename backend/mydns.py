@@ -19,7 +19,14 @@ class DNSChangeRequest(BaseModel):
 def measure_dns(domain: str = Query(...), count: int = Query(5, gt=0)):
     if not domain:
         raise HTTPException(status_code=400, detail="도메인을 입력하세요.")
+    
+    # 도메인 정리 (URL에서 도메인만 추출)
+    domain = clean_domain(domain)
+    
+    if not is_valid_domain(domain):
+        raise HTTPException(status_code=400, detail=f"유효하지 않은 도메인: {domain}")
 
+    # 실제 측정 로직
     records = []
     # dns_servers 딕셔너리를 사용해 측정
     for name, ip in dns_servers.items():
@@ -30,10 +37,13 @@ def measure_dns(domain: str = Query(...), count: int = Query(5, gt=0)):
         for _ in range(count):
             try:
                 start = time.time()
+                # 타임아웃 설정 (2초)
+                resolver.timeout = 2
+                resolver.lifetime = 2
                 resolver.resolve(domain, 'A')
                 end = time.time()
                 times.append(round((end - start) * 1000, 2))
-            except:
+            except Exception:
                 times.append(float('inf'))
 
         avg = round(sum(times) / len(times), 2)
@@ -46,6 +56,7 @@ def measure_dns(domain: str = Query(...), count: int = Query(5, gt=0)):
             "평균 응답 시간(ms)": avg
         })
 
+    # CSV 저장
     csv_name = "dns_응답속도_결과.csv"
     header_needed = not pd.io.common.file_exists(csv_name)
     pd.DataFrame(records).to_csv(
@@ -54,6 +65,7 @@ def measure_dns(domain: str = Query(...), count: int = Query(5, gt=0)):
 
     return {"도메인": domain, "측정 횟수": count, "결과": records}
 
+<<<<<<< HEAD
 @router.post("/change-dns")
 def change_dns_server(request: DNSChangeRequest):
     global current_dns_server
@@ -74,3 +86,32 @@ def reset_dns_server():
 def get_current_dns():
     global current_dns_server
     return {"current_dns": current_dns_server}
+=======
+def clean_domain(domain):
+    """도메인 정리"""
+    # http:// 또는 https:// 제거
+    if domain.startswith('http://'):
+        domain = domain[7:]
+    elif domain.startswith('https://'):
+        domain = domain[8:]
+    
+    # www. 제거
+    if domain.startswith('www.'):
+        domain = domain[4:]
+    
+    # 경로 제거
+    if '/' in domain:
+        domain = domain.split('/')[0]
+    
+    # 포트 번호 제거
+    if ':' in domain:
+        domain = domain.split(':')[0]
+    
+    return domain
+
+def is_valid_domain(domain):
+    """도메인 유효성 검사"""
+    import re
+    pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+    return re.match(pattern, domain) is not None
+>>>>>>> 2e01351 (tkinter기반)

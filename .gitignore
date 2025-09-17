@@ -1,2 +1,13 @@
 venv/
 .DS_Store
+__pycache__/
+
+*.pyc
+
+*.pyo
+
+*.DS_Store
+
+backend/*_응답속도_결과.csv
+
+*_응답속도_결과.csv

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import subprocess
 import sys
 import threading
@@ -30,3 +31,29 @@ if __name__ == "__main__":
 
     # 프론트엔드 UI 실행
     run_frontend()
+=======
+#!/usr/bin/env python3
+"""
+Network Performance Optimizer - 간단 실행 스크립트
+"""
+
+import subprocess
+import sys
+import os
+
+def main():
+    """간단한 실행 함수"""
+    print("🌐 Network Performance Optimizer 시작 중...")
+    
+    # run_app.py 실행
+    try:
+        subprocess.run([sys.executable, "run_app.py"])
+    except KeyboardInterrupt:
+        print("\n🛑 애플리케이션이 종료되었습니다.")
+    except Exception as e:
+        print(f"❌ 실행 오류: {e}")
+
+if __name__ == "__main__":
+    main()
+
+>>>>>>> 2e01351 (tkinter기반)

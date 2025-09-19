@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class NetworkAPIClient:
     """네트워크 성능 측정 API 클라이언트"""
     
-    def __init__(self, base_url: str = "http://127.0.0.1:9000"):
+    def __init__(self, base_url: str = "http://127.0.0.1:9001"):
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
         
@@ -93,6 +93,23 @@ class NetworkAPIClient:
     def get_server_info(self) -> Dict:
         """서버 정보 조회"""
         return self._make_request("GET", "/")
+    
+    def apply_dns_server(self, server_name: str) -> Dict:
+        """DNS 서버 설정"""
+        if not server_name:
+            return {"error": "DNS 서버 이름을 입력하세요."}
+            
+        logger.info(f"DNS 서버 설정: {server_name}")
+        
+        data = {"name": server_name}
+        
+        return self._make_request("POST", "/api/v1/apply", json=data)
+    
+    def reset_dns_server(self) -> Dict:
+        """DNS 서버 리셋"""
+        logger.info("DNS 서버 리셋")
+        
+        return self._make_request("POST", "/api/v1/reset")
 
 # 전역 API 클라이언트 인스턴스
 api_client = NetworkAPIClient()
@@ -109,3 +126,11 @@ def get_fastest_ip(domain: str) -> Dict:
 def check_server_health() -> Dict:
     """서버 상태를 확인하는 편의 함수"""
     return api_client.health_check()
+
+def apply_dns_server(server_name: str) -> Dict:
+    """DNS 서버를 설정하는 편의 함수"""
+    return api_client.apply_dns_server(server_name)
+
+def reset_dns_server() -> Dict:
+    """DNS 서버를 리셋하는 편의 함수"""
+    return api_client.reset_dns_server()

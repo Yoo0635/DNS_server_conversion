@@ -8,10 +8,7 @@ requests==2.32.4
 
 # Frontend Dependencies
 matplotlib>=3.8.0
-tkinter  # Built-in with Python
-
-# Cross-platform Support
-platform  # Built-in with Python
+PyQt5==5.15.11
 
 # Development Dependencies
 pydantic==2.11.7

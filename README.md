@@ -7,7 +7,9 @@
 - **DNS 서버 성능 측정**: Google, KT, SKB, LGU+, KISA DNS 서버별 응답 시간 비교
 - **IP 주소 성능 측정**: 도메인의 여러 IP 주소 중 가장 빠른 IP 찾기
 - **실시간 시각화**: 현대적인 그래프로 성능 데이터 시각화
+- **DNS 서버 설정**: 최적의 DNS 서버로 자동 변경
 - **크로스 플랫폼 지원**: Windows, macOS, Linux 지원
+- **플랫폼별 권한 관리**: Windows UAC, macOS 비밀번호 입력
 - **종합 분석**: DNS와 IP 성능을 종합한 최적화 추천
 
 ## 🚀 빠른 시작
@@ -31,7 +33,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. 애플리케이션 실행 (권장)
+### 3. 애플리케이션 실행
 
 **하나의 명령어로 백엔드와 프론트엔드를 동시에 실행:**
 
@@ -39,20 +41,7 @@ pip install -r requirements.txt
 python run_app.py
 ```
 
-또는 더 간단하게:
-
-```bash
-python start.py
-```
-
-### 3. 개별 실행 (고급 사용자용)
-
-백엔드만 실행:
-```bash
-python run_backend.py
-```
-
-프론트엔드만 실행:
+**프론트엔드만 실행:**
 ```bash
 python run_frontend.py
 ```
@@ -63,17 +52,17 @@ python run_frontend.py
 Network-Project/
 ├── backend/                 # FastAPI 백엔드
 │   ├── main.py             # 메인 API 서버
-│   ├── mydns.py            # DNS 측정 API
-│   ├── ip.py               # IP 측정 API
-│   ├── dns_servers.py      # DNS 서버 목록
-│   └── requirements.txt    # 백엔드 의존성
-├── frontend/               # Tkinter 프론트엔드
-│   ├── main_ui.py          # 메인 애플리케이션
-│   ├── dashboard_ui.py     # 대시보드 UI
-│   ├── graphs.py           # 그래프 생성 모듈
-│   ├── api_client.py       # API 클라이언트
-│   └── ticket_ui.py        # 티켓팅 UI
-├── run_backend.py          # 백엔드 실행 스크립트
+│   ├── admin_check.py      # 관리자 권한 체크
+│   ├── routers/            # API 라우터
+│   ├── services/           # 비즈니스 로직
+│   ├── schemas/            # 데이터 모델
+│   └── dns_servers.py      # DNS 서버 목록
+├── frontend/               # PyQt5 프론트엔드
+│   ├── pyqt_app.py         # 메인 애플리케이션
+│   ├── pyqt_window.py      # 메인 윈도우
+│   ├── pyqt_charts.py      # 그래프 생성
+│   └── api_client.py       # API 클라이언트
+├── run_app.py              # 통합 실행 스크립트
 ├── run_frontend.py         # 프론트엔드 실행 스크립트
 └── requirements.txt        # 전체 의존성
 ```
@@ -90,6 +79,18 @@ GET /api/v1/measure?domain=example.com&count=5
 GET /api/v1/ip?domain=example.com
 ```
 
+### DNS 서버 설정
+```
+POST /api/v1/apply
+Content-Type: application/json
+{"server_name": "Google"}
+```
+
+### DNS 서버 리셋
+```
+POST /api/v1/reset
+```
+
 ### 서버 상태 확인
 ```
 GET /health
@@ -97,15 +98,17 @@ GET /health
 
 ### API 문서
 ```
-http://127.0.0.1:8000/docs
+http://127.0.0.1:9001/docs
 ```
 
 ## 🎨 UI 특징
 
-- **현대적인 디자인**: 플랫폼별 네이티브 스타일 적용
+- **현대적인 PyQt5 디자인**: 플랫폼별 네이티브 스타일 적용
 - **반응형 레이아웃**: 다양한 화면 크기 지원
 - **실시간 피드백**: 측정 진행 상황 및 결과 표시
 - **직관적인 인터페이스**: 사용하기 쉬운 버튼과 입력 필드
+- **관리자 권한 표시**: DNS 설정 가능 여부 실시간 표시
+- **플랫폼별 권한 요청**: Windows UAC, macOS 비밀번호 입력
 
 ## 📊 측정 결과
 
@@ -129,7 +132,10 @@ http://127.0.0.1:8000/docs
    - 🔍 DNS 서버 응답 시간 측정
    - ⚡ IP 응답 속도 측정
    - 📊 종합 성능 분석
-4. **결과 확인**: 그래프로 성능 데이터 시각화
+4. **DNS 설정**: 최적의 DNS 서버로 변경
+   - Windows: UAC 팝업에서 "예" 클릭
+   - macOS: 비밀번호 입력 다이얼로그
+5. **결과 확인**: 그래프로 성능 데이터 시각화
 
 ## 🛠️ 개발자 정보
 
@@ -137,10 +143,11 @@ http://127.0.0.1:8000/docs
 
 ### 기술 스택
 
-- **Backend**: FastAPI, Python, dnspython
-- **Frontend**: Tkinter, Matplotlib
+- **Backend**: FastAPI, Python, dnspython, Pydantic
+- **Frontend**: PyQt5, Matplotlib
 - **Data**: Pandas, NumPy
 - **Visualization**: Matplotlib
+- **Architecture**: MVC 패턴, RESTful API
 
 ## 📝 라이선스
 

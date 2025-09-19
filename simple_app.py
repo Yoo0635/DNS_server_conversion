@@ -99,24 +99,26 @@ def main():
     signal.signal(signal.SIGTERM, app.signal_handler)
     
     try:
-        # 백엔드 시작
-        if not app.start_backend():
-            print("❌ 백엔드 서버 시작 실패")
-            input("Enter를 눌러 종료...")
-            return
+        # 백엔드 시작 시도
+        backend_started = app.start_backend()
         
-        # 백엔드 준비 대기
-        if not app.wait_for_backend():
-            print("❌ 백엔드 서버 연결 실패")
-            input("Enter를 눌러 종료...")
-            return
+        if backend_started:
+            # 백엔드 준비 대기
+            if app.wait_for_backend():
+                print("🎉 서비스 시작 중입니다...")
+                print("📱 GUI 창이 곧 열립니다...")
+                print("🔄 종료하려면 Ctrl+C를 누르세요")
+                print("-" * 50)
+            else:
+                print("⚠️ 백엔드 서버 연결 실패")
+                print("📱 GUI만 실행합니다 (측정 기능 제한)")
+                print("-" * 50)
+        else:
+            print("⚠️ 백엔드 서버 시작 실패")
+            print("📱 GUI만 실행합니다 (측정 기능 제한)")
+            print("-" * 50)
         
-        print("🎉 서비스 시작 중입니다...")
-        print("📱 GUI 창이 곧 열립니다...")
-        print("🔄 종료하려면 Ctrl+C를 누르세요")
-        print("-" * 50)
-        
-        # PyQt5 프론트엔드 실행
+        # PyQt5 프론트엔드 실행 (백엔드 상태와 관계없이)
         from frontend.pyqt_app import main as frontend_main
         frontend_main()
         
@@ -124,10 +126,12 @@ def main():
         print(f"❌ 모듈 로딩 실패: {e}")
         print("개발 환경에서 실행하세요:")
         print("python run_app.py")
-        input("Enter를 눌러 종료...")
+        print("5초 후 자동 종료...")
+        time.sleep(5)
     except Exception as e:
         print(f"❌ 실행 오류: {e}")
-        input("Enter를 눌러 종료...")
+        print("5초 후 자동 종료...")
+        time.sleep(5)
     finally:
         app.cleanup()
 

@@ -1,6 +1,10 @@
-# 🌐 Network Performance Optimizer
+# 🌐 Network Performance Optimizer v1.0.0
 
 네트워크 성능 최적화를 위한 DNS 및 IP 응답 속도 측정 도구입니다.
+
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Yoo0635/Network-Project)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/Yoo0635/Network-Project)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Yoo0635/Network-Project)
 
 ## ✨ 주요 기능
 
@@ -34,6 +38,17 @@ pip install -r requirements.txt
 ```
 
 ### 3. 애플리케이션 실행
+
+#### 🚀 간편 실행 (추천!)
+
+**실행 파일 다운로드 후 더블클릭:**
+```
+1. GitHub에서 ZIP 파일 다운로드
+2. 압축 해제
+3. dist/NetworkOptimizer.app 더블클릭 (macOS)
+```
+
+#### 🔧 개발자용 실행
 
 **하나의 명령어로 백엔드와 프론트엔드를 동시에 실행:**
 

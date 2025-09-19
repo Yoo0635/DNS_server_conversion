@@ -1,23 +1,27 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from mydns import router as dns_router
 import uvicorn
+import logging
 import sys
 import os
 
-# ip.py 모듈 import (파일명 충돌 방지)
-sys.path.append(os.path.dirname(__file__))
-try:
-    import ip as ip_module
-    ip_router = ip_module.router
-except ImportError:
-    print("⚠️  ip.py 모듈을 찾을 수 없습니다. IP 측정 기능이 비활성화됩니다.")
-    ip_router = None
+# 새로운 라우터들 import
+from routers.dns_measure import router as dns_measure_router
+from routers.dns_apply import router as dns_apply_router
+from routers.dns_reset import router as dns_reset_router
+from routers.ip_measure import router as ip_measure_router
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Network Performance Optimizer API",
-    description="DNS 및 IP 응답 속도 측정을 위한 API",
-    version="1.0.0"
+    description="DNS 및 IP 응답 속도 측정을 위한 API (개선된 버전)",
+    version="2.0.0"
 )
 
 # CORS 설정 (크로스 플랫폼 지원)
@@ -29,25 +33,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록
-app.include_router(dns_router, prefix="/api/v1", tags=["DNS"])
-if ip_router:
-    app.include_router(ip_router, prefix="/api/v1", tags=["IP"])
+# 새로운 라우터 등록
+app.include_router(dns_measure_router, prefix="/api/v1", tags=["DNS 측정"])
+app.include_router(dns_apply_router, prefix="/api/v1", tags=["DNS 설정"])
+app.include_router(dns_reset_router, prefix="/api/v1", tags=["DNS 설정"])
+app.include_router(ip_measure_router, prefix="/api/v1", tags=["IP 측정"])
+
+logger.info("✅ 모든 라우터가 성공적으로 로드되었습니다.")
 
 @app.get("/")
 def root():
     return {
-        "message": "Network Performance Optimizer API",
-        "version": "1.0.0",
+        "message": "Network Performance Optimizer API (개선된 버전)",
+        "version": "2.0.0",
+        "features": [
+            "Pydantic 유효성 검사",
+            "체계적인 에러 핸들링",
+            "크로스 플랫폼 DNS 설정",
+            "상세한 로깅 시스템",
+            "구조화된 라우터 분리"
+        ],
         "endpoints": {
             "dns_measure": "/api/v1/measure?domain=example.com&count=5",
+            "dns_apply": "/api/v1/apply (POST)",
+            "dns_reset": "/api/v1/reset (POST)",
             "ip_measure": "/api/v1/ip?domain=example.com"
-        }
+        },
+        "documentation": "/docs"
     }
 
 @app.get("/health")
 def health_check():
-    return {"status": "healthy", "service": "Network Performance Optimizer"}
+    return {
+        "status": "healthy", 
+        "service": "Network Performance Optimizer",
+        "version": "2.0.0",
+        "features": "개선된 버전 - Pydantic, 에러 핸들링, 크로스 플랫폼 지원"
+    }
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8002, reload=True)
+    uvicorn.run("main:app", host="127.0.0.1", port=9001, reload=True)

@@ -12,6 +12,7 @@ import time
 import platform
 import signal
 from pathlib import Path
+from backend.admin_check import AdminChecker
 
 class NetworkOptimizerApp:
     """네트워크 성능 최적화 통합 애플리케이션"""
@@ -56,7 +57,7 @@ class NetworkOptimizerApp:
                 sys.executable, "-m", "uvicorn", 
                 "main:app", 
                 "--host", "127.0.0.1", 
-                "--port", "9000", 
+                "--port", "9001", 
                 "--reload"
             ], cwd=backend_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
@@ -65,7 +66,6 @@ class NetworkOptimizerApp:
             
             if self.backend_process.poll() is None:
                 print("✅ 백엔드 서버가 성공적으로 시작되었습니다.")
-                print("📍 API 주소: http://127.0.0.1:9000")
                 return True
             else:
                 print("❌ 백엔드 서버 시작 실패")
@@ -76,12 +76,12 @@ class NetworkOptimizerApp:
             return False
     
     def start_frontend(self):
-        """프론트엔드 애플리케이션 시작"""
+        """프론트엔드 애플리케이션 시작 (PyQt5 버전)"""
         print("🖥️  프론트엔드 애플리케이션을 시작합니다...")
         
         try:
-            # 프론트엔드 모듈 import 및 실행
-            from frontend.main_ui import main
+            # PyQt5 프론트엔드 모듈 import 및 실행
+            from frontend.pyqt_app import main
             main()
             
         except ImportError as e:
@@ -141,6 +141,10 @@ class NetworkOptimizerApp:
         if not self.check_dependencies():
             sys.exit(1)
         
+        # 관리자 권한 확인은 GUI에서 처리
+        print("✅ 애플리케이션을 시작합니다.")
+        print("📝 DNS 설정 기능은 GUI에서 권한을 요청합니다.")
+        
         # 시그널 핸들러 등록
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
@@ -151,13 +155,8 @@ class NetworkOptimizerApp:
                 print("❌ 백엔드 서버 시작 실패")
                 sys.exit(1)
             
-            # 백엔드 연결 대기
-            if not self.wait_for_backend():
-                print("❌ 백엔드 서버 연결 실패")
-                self.cleanup()
-                sys.exit(1)
-            
-            print("\n🎉 모든 서비스가 준비되었습니다!")
+            # 이전 동작으로 복귀: 백엔드 준비 대기 없이 즉시 프론트 시작
+            print("\n🎉 서비스 시작 중입니다 (비동기).")
             print("📱 GUI 창이 곧 열립니다...")
             print("🔄 종료하려면 Ctrl+C를 누르세요")
             print("-" * 50)

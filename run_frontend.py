@@ -8,10 +8,13 @@ import sys
 import os
 import platform
 
+# Backend base URL (override via env: API_BASE)
+API_BASE = os.environ.get("API_BASE", "http://127.0.0.1:9001")
+
 def check_dependencies():
     """필수 의존성 확인"""
     try:
-        import tkinter
+        import PyQt5
         import matplotlib
         import requests
         print("✅ 모든 의존성이 설치되어 있습니다.")
@@ -26,7 +29,9 @@ def check_backend():
     """백엔드 서버 연결 확인"""
     try:
         import requests
-        response = requests.get("http://127.0.0.1:8000/health", timeout=2)
+        health_url = f"{API_BASE.rstrip('/')}/health"
+        print(f"🔎 백엔드 헬스체크: {health_url}")
+        response = requests.get(health_url, timeout=5)
         if response.status_code == 200:
             print("✅ 백엔드 서버에 연결되었습니다.")
             return True
@@ -34,7 +39,7 @@ def check_backend():
         pass
     
     print("⚠️  백엔드 서버에 연결할 수 없습니다.")
-    print("백엔드 서버를 먼저 시작하세요:")
+    print("백엔드 서버를 먼저 시작하세요 (기본: 9000 포트):")
     print("python run_backend.py")
     return False
 
@@ -45,7 +50,7 @@ def start_frontend():
     
     try:
         # 프론트엔드 모듈 import
-        from frontend.main_ui import main
+        from frontend.pyqt_app import main
         main()
     except ImportError as e:
         print(f"❌ 프론트엔드 모듈 로딩 실패: {e}")

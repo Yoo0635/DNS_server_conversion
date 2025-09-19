@@ -24,7 +24,7 @@ def get_ip(domain: str = Query(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"DNS 조회 실패: {str(e)}")
 
-    # ------- 응답 생성 로직 (함수 내부로 이동/복구) -------
+    # ------- 응답 생성 로직 -------
     results = []
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     

@@ -1,8 +1,8 @@
-# 🌐 Network Performance Optimizer v1.0.0
+# 🌐 Network Performance Optimizer v1.1.0
 
 네트워크 성능 최적화를 위한 DNS 및 IP 응답 속도 측정 도구입니다.
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Yoo0635/Network-Project)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/Yoo0635/Network-Project)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](https://github.com/Yoo0635/Network-Project)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Yoo0635/Network-Project)
 

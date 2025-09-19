@@ -46,10 +46,17 @@ class NetworkOptimizerApp:
         print("🚀 백엔드 서버를 시작합니다...")
         
         try:
-            # 백엔드 디렉토리로 이동
-            backend_dir = Path(__file__).parent / "backend"
+            # 실행 파일인지 확인
+            if getattr(sys, 'frozen', False):
+                # PyInstaller로 실행된 경우
+                backend_dir = Path(sys._MEIPASS) / "backend"
+            else:
+                # 개발 환경인 경우
+                backend_dir = Path(__file__).parent / "backend"
+            
             if not backend_dir.exists():
                 print("❌ 백엔드 디렉토리를 찾을 수 없습니다.")
+                print(f"찾는 경로: {backend_dir}")
                 return False
             
             # uvicorn으로 서버 시작
@@ -80,6 +87,14 @@ class NetworkOptimizerApp:
         print("🖥️  프론트엔드 애플리케이션을 시작합니다...")
         
         try:
+            # 실행 파일인지 확인하고 경로 설정
+            if getattr(sys, 'frozen', False):
+                # PyInstaller로 실행된 경우
+                sys.path.insert(0, str(Path(sys._MEIPASS) / "frontend"))
+            else:
+                # 개발 환경인 경우
+                sys.path.insert(0, str(Path(__file__).parent / "frontend"))
+            
             # PyQt5 프론트엔드 모듈 import 및 실행
             from frontend.pyqt_app import main
             main()
@@ -97,7 +112,7 @@ class NetworkOptimizerApp:
         max_attempts = 30
         for i in range(max_attempts):
             try:
-                response = requests.get("http://127.0.0.1:9000/health", timeout=1)
+                response = requests.get("http://127.0.0.1:9001/health", timeout=1)
                 if response.status_code == 200:
                     print("✅ 백엔드 서버 연결 확인 완료")
                     return True

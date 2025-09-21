@@ -5,9 +5,12 @@ from PyQt5.QtWidgets import (
     QMessageBox, QInputDialog
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from . import api_client
-from .pyqt_charts import canvas_dns, canvas_ip
-from backend.admin_check import AdminChecker
+import api_client
+from pyqt_charts import canvas_dns, canvas_ip
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+from admin_check import AdminChecker
 
 
 QSS = """
@@ -340,7 +343,18 @@ class MainWindow(QWidget):
 
     def on_dns_apply_done(self, data: dict):
         if not isinstance(data, dict) or 'error' in data:
-            self.set_status(f'DNS apply failed: {data.get("error", "unknown error")}', False)
+            error_msg = data.get("error", "unknown error")
+            if "관리자 권한" in error_msg or "sudo" in error_msg.lower():
+                # 관리자 권한 오류인 경우 사용자 친화적 메시지 표시
+                QMessageBox.warning(self, "관리자 권한 필요", 
+                    "DNS 설정을 위해 관리자 권한이 필요합니다.\n\n"
+                    "해결 방법:\n"
+                    "1. 터미널에서 다음 명령어로 실행:\n"
+                    "   sudo python3 run_app.py\n\n"
+                    "2. 또는 시스템 설정에서 DNS를 수동으로 변경하세요.")
+                self.set_status("❌ 관리자 권한이 필요합니다", False)
+            else:
+                self.set_status(f'DNS apply failed: {error_msg}', False)
         else:
             message = data.get('message', 'DNS applied successfully')
             server_name = data.get('server_name', 'Unknown')
@@ -349,7 +363,18 @@ class MainWindow(QWidget):
 
     def on_dns_reset_done(self, data: dict):
         if not isinstance(data, dict) or 'error' in data:
-            self.set_status(f'DNS reset failed: {data.get("error", "unknown error")}', False)
+            error_msg = data.get("error", "unknown error")
+            if "관리자 권한" in error_msg or "sudo" in error_msg.lower():
+                # 관리자 권한 오류인 경우 사용자 친화적 메시지 표시
+                QMessageBox.warning(self, "관리자 권한 필요", 
+                    "DNS 리셋을 위해 관리자 권한이 필요합니다.\n\n"
+                    "해결 방법:\n"
+                    "1. 터미널에서 다음 명령어로 실행:\n"
+                    "   sudo python3 run_app.py\n\n"
+                    "2. 또는 시스템 설정에서 DNS를 수동으로 변경하세요.")
+                self.set_status("❌ 관리자 권한이 필요합니다", False)
+            else:
+                self.set_status(f'DNS reset failed: {error_msg}', False)
         else:
             message = data.get('message', 'DNS reset successfully')
             self.set_status(message, True)

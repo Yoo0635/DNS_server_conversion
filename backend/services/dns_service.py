@@ -90,10 +90,10 @@ class DNSService:
         except Exception as e:
             raise ValueError(f"유효하지 않은 IP 형식: {dns_ip}")
         
-        # 관리자 권한 확인
-        if not AdminChecker.is_admin():
-            logger.warning("관리자 권한이 없습니다. DNS 설정을 위해 권한이 필요합니다.")
-            raise PermissionError("DNS 설정을 위해 관리자 권한이 필요합니다.")
+        # 관리자 권한 확인 제거 - 일반 사용자도 DNS 변경 가능하도록 수정
+        # if not AdminChecker.is_admin():
+        #     logger.warning("관리자 권한이 없습니다. DNS 설정을 위해 권한이 필요합니다.")
+        #     raise Exception("DNS 설정을 위해 관리자 권한이 필요합니다.")
         
         os_name = platform.system()
         logger.info(f"DNS 설정 시작: {dns_ip} ({os_name})")
@@ -107,8 +107,12 @@ class DNSService:
                 adapter = DNSService.detect_adapter_mac()
                 command = f'networksetup -setdnsservers "{adapter}" {dns_ip}'
                 
+            elif os_name == "Linux":  # Linux
+                # Linux에서는 /etc/resolv.conf 파일을 직접 수정
+                command = f'echo "nameserver {dns_ip}" | sudo tee /etc/resolv.conf'
+                
             else:
-                raise Exception("Windows, macOS만 지원합니다.")
+                raise Exception("Windows, macOS, Linux만 지원합니다.")
             
             logger.info(f"실행 명령어: {command}")
             result = subprocess.run(
@@ -143,10 +147,10 @@ class DNSService:
     @staticmethod
     def reset_dns() -> bool:
         """DNS 서버 리셋 (기본값으로 복구)"""
-        # 관리자 권한 확인
-        if not AdminChecker.is_admin():
-            logger.warning("관리자 권한이 없습니다. DNS 리셋을 위해 권한이 필요합니다.")
-            raise PermissionError("DNS 리셋을 위해 관리자 권한이 필요합니다.")
+        # 관리자 권한 확인 제거 - 일반 사용자도 DNS 리셋 가능하도록 수정
+        # if not AdminChecker.is_admin():
+        #     logger.warning("관리자 권한이 없습니다. DNS 리셋을 위해 권한이 필요합니다.")
+        #     raise Exception("DNS 리셋을 위해 관리자 권한이 필요합니다.")
         
         os_name = platform.system()
         logger.info(f"DNS 리셋 시작 ({os_name})")
@@ -160,8 +164,12 @@ class DNSService:
                 adapter = DNSService.detect_adapter_mac()
                 command = f'networksetup -setdnsservers "{adapter}" Empty'
                 
+            elif os_name == "Linux":  # Linux
+                # Linux에서는 기본 DNS로 복구 (systemd-resolved 사용)
+                command = 'sudo systemctl restart systemd-resolved'
+                
             else:
-                raise Exception("Windows, macOS만 지원합니다.")
+                raise Exception("Windows, macOS, Linux만 지원합니다.")
             
             logger.info(f"실행 명령어: {command}")
             result = subprocess.run(

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class NetworkAPIClient:
     """네트워크 성능 측정 API 클라이언트"""
     
-    def __init__(self, base_url: str = "http://127.0.0.1:9001"):
+    def __init__(self, base_url: str = "http://127.0.0.1:9002"):
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
         
@@ -52,7 +52,10 @@ class NetworkAPIClient:
             
         except requests.exceptions.HTTPError as e:
             logger.error(f"HTTP 오류: {e}")
-            return {"error": f"서버 오류: {e.response.status_code}"}
+            if e.response.status_code == 403:
+                return {"error": f"관리자 권한이 필요합니다: {e.response.text}"}
+            else:
+                return {"error": f"서버 오류: {e.response.status_code}"}
             
         except Exception as e:
             logger.error(f"예상치 못한 오류: {e}")

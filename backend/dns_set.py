@@ -1,4 +1,6 @@
 import platform, subprocess
+import os
+import sys
 
 def detect_adapter_win(): # Win 어댑터 탐지
     result = subprocess.run(
@@ -39,24 +41,40 @@ def detect_adapter_mac(): # mac 어댑터 탐지
 def set_dns(dns_ip : str): # DNS 설정
     if not dns_ip:
         raise ValueError("DNS IP가 None입니다.")
+    
     os_name = platform.system() 
-    if(os_name == "Windows"):
-        adapter = detect_adapter_win()
-        command = f'netsh interface ip set dns name="{adapter}" static {dns_ip}'
-    elif(os_name == "Darwin"):
-        adapter = detect_adapter_mac()
-        command = f'networksetup -setdnsservers "{adapter}" {dns_ip}'
-    else:
-        raise Exception("Windows, Mac만 지원합니다.")
     
     # 디버깅을 위한 로그 추가
     print(f"🔍 DNS 설정 디버깅:")
     print(f"   OS: {os_name}")
-    print(f"   어댑터: {adapter}")
     print(f"   DNS IP: {dns_ip}")
-    print(f"   실행할 명령어: {command}")
     
-    result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding="utf-8")
+    if(os_name == "Windows"):
+        adapter = detect_adapter_win()
+        command = f'netsh interface ip set dns name="{adapter}" static {dns_ip}'
+        print(f"   어댑터: {adapter}")
+        print(f"   실행할 명령어: {command}")
+        
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding="utf-8")
+        
+    elif(os_name == "Darwin"):
+        adapter = detect_adapter_mac()
+        print(f"   어댑터: {adapter}")
+        
+        # macOS에서 sudo 없이 시도해보고, 실패하면 sudo로 재시도
+        command_without_sudo = f'networksetup -setdnsservers "{adapter}" {dns_ip}'
+        command_with_sudo = f'sudo networksetup -setdnsservers "{adapter}" {dns_ip}'
+        
+        print(f"   먼저 sudo 없이 시도: {command_without_sudo}")
+        result = subprocess.run(command_without_sudo, shell=True, capture_output=True, text=True, encoding="utf-8")
+        
+        # sudo 없이 실패한 경우 sudo로 재시도
+        if result.returncode != 0:
+            print(f"   sudo 없이 실패, sudo로 재시도: {command_with_sudo}")
+            result = subprocess.run(command_with_sudo, shell=True, capture_output=True, text=True, encoding="utf-8")
+            
+    else:
+        raise Exception("Windows, Mac만 지원합니다.")
     
     # 결과 확인
     print(f"   반환 코드: {result.returncode}")
@@ -64,31 +82,47 @@ def set_dns(dns_ip : str): # DNS 설정
     print(f"   stderr: {result.stderr.strip()}")
     
     if result.returncode != 0:
-        if os_name == "Darwin":
-            raise Exception(f"DNS 설정 실패: {result.stderr.strip()}")
+        error_msg = result.stderr.strip() if result.stderr.strip() else "알 수 없는 오류"
+        if "sudo" in error_msg.lower() or "permission" in error_msg.lower():
+            raise Exception(f"관리자 권한이 필요합니다. 터미널에서 sudo로 실행해주세요: {error_msg}")
         else:
-            raise Exception(f"DNS 설정 실패: {result.stderr.strip()}")
+            raise Exception(f"DNS 설정 실패: {error_msg}")
     else:
         print(f"✅ DNS 설정 성공!")
 
 def reset_dns(): # DNS 리셋
     os_name = platform.system()
-    if(os_name == "Windows"):
-        adapter = detect_adapter_win()
-        command = f'netsh interface ip set dns name="{adapter}" dhcp'
-    elif(os_name == "Darwin"):
-        adapter = detect_adapter_mac()
-        command = f'networksetup -setdnsservers "{adapter}" Empty'
-    else:
-        raise Exception("Windows, Mac만 지원합니다.")
     
     # 디버깅을 위한 로그 추가
     print(f"🔍 DNS 리셋 디버깅:")
     print(f"   OS: {os_name}")
-    print(f"   어댑터: {adapter}")
-    print(f"   실행할 명령어: {command}")
     
-    result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding="utf-8")
+    if(os_name == "Windows"):
+        adapter = detect_adapter_win()
+        command = f'netsh interface ip set dns name="{adapter}" dhcp'
+        print(f"   어댑터: {adapter}")
+        print(f"   실행할 명령어: {command}")
+        
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, encoding="utf-8")
+        
+    elif(os_name == "Darwin"):
+        adapter = detect_adapter_mac()
+        print(f"   어댑터: {adapter}")
+        
+        # macOS에서 sudo 없이 시도해보고, 실패하면 sudo로 재시도
+        command_without_sudo = f'networksetup -setdnsservers "{adapter}" Empty'
+        command_with_sudo = f'sudo networksetup -setdnsservers "{adapter}" Empty'
+        
+        print(f"   먼저 sudo 없이 시도: {command_without_sudo}")
+        result = subprocess.run(command_without_sudo, shell=True, capture_output=True, text=True, encoding="utf-8")
+        
+        # sudo 없이 실패한 경우 sudo로 재시도
+        if result.returncode != 0:
+            print(f"   sudo 없이 실패, sudo로 재시도: {command_with_sudo}")
+            result = subprocess.run(command_with_sudo, shell=True, capture_output=True, text=True, encoding="utf-8")
+            
+    else:
+        raise Exception("Windows, Mac만 지원합니다.")
     
     # 결과 확인
     print(f"   반환 코드: {result.returncode}")
@@ -96,9 +130,10 @@ def reset_dns(): # DNS 리셋
     print(f"   stderr: {result.stderr.strip()}")
     
     if result.returncode != 0:
-        if os_name == "Darwin":
-            raise Exception(f"DNS 리셋 실패: {result.stderr.strip()}")
+        error_msg = result.stderr.strip() if result.stderr.strip() else "알 수 없는 오류"
+        if "sudo" in error_msg.lower() or "permission" in error_msg.lower():
+            raise Exception(f"관리자 권한이 필요합니다. 터미널에서 sudo로 실행해주세요: {error_msg}")
         else:
-            raise Exception(f"DNS 리셋 실패: {result.stderr.strip()}")
+            raise Exception(f"DNS 리셋 실패: {error_msg}")
     else:
         print(f"✅ DNS 리셋 성공!")

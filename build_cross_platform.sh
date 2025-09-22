@@ -74,3 +74,4 @@ case $PLATFORM in
         echo "   Windows: dist/NetworkOptimizer.exe 더블클릭"
         ;;
 esac
+

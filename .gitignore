@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-Network-Project/releases/
-Network-Project/dist/
-=======
 # Python
 __pycache__/
 *.py[cod]
@@ -123,6 +119,8 @@ Desktop.ini
 *.pkg
 *.deb
 *.rpm
+dist/
+build/
 
 # Large files
 *.zip
@@ -138,4 +136,8 @@ Desktop.ini
 # Temporary files
 *.tmp
 *.temp
->>>>>>> v3.0.0-clean
+
+# Network-Project subfolder (legacy)
+Network-Project/
+Network-Project/releases/
+Network-Project/dist/

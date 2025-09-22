@@ -59,3 +59,4 @@ echo 🚀 실행 방법:
 echo    Windows: dist\NetworkOptimizer.exe 더블클릭
 echo.
 pause
+

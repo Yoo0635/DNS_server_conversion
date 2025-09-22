@@ -17,3 +17,4 @@ cd "$(dirname "$0")"
 
 # sudo로 애플리케이션 실행
 sudo python3 run_app.py
+

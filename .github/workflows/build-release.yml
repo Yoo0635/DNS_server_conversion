@@ -1,0 +1,149 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            spec_file: NetworkOptimizer-Linux.spec
+            output_name: NetworkOptimizer-Linux
+            archive_name: NetworkOptimizer-Linux-v3.0.0.tar.gz
+          - os: windows-latest
+            platform: windows
+            spec_file: NetworkOptimizer-Windows.spec
+            output_name: NetworkOptimizer-Windows
+            archive_name: NetworkOptimizer-Windows-v3.0.0.zip
+          - os: macos-latest
+            platform: macos
+            spec_file: NetworkOptimizer-macOS.spec
+            output_name: NetworkOptimizer-macOS
+            archive_name: NetworkOptimizer-macOS-v3.0.0.zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install PyInstaller
+
+    - name: Build application
+      run: |
+        if [ "${{ matrix.platform }}" = "linux" ]; then
+          python -m PyInstaller ${{ matrix.spec_file }} --noconfirm
+          chmod +x dist/${{ matrix.output_name }}
+        elif [ "${{ matrix.platform }}" = "windows" ]; then
+          python -m PyInstaller ${{ matrix.spec_file }} --noconfirm
+        else
+          python -m PyInstaller ${{ matrix.spec_file }} --noconfirm
+        fi
+
+    - name: Create archive
+      run: |
+        if [ "${{ matrix.platform }}" = "linux" ]; then
+          tar -czf ${{ matrix.archive_name }} -C dist ${{ matrix.output_name }}
+        elif [ "${{ matrix.platform }}" = "windows" ]; then
+          powershell Compress-Archive -Path "dist\${{ matrix.output_name }}" -DestinationPath "${{ matrix.archive_name }}"
+        else
+          zip -r ${{ matrix.archive_name }} dist/${{ matrix.output_name }}.app
+        fi
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.platform }}-build
+        path: ${{ matrix.archive_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./artifacts
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Network Optimizer ${{ github.ref }}
+        body: |
+          🌐 Network Optimizer ${{ github.ref }} - 크로스 플랫폼 릴리즈
+          
+          ✨ 새로운 기능:
+          - 안정적인 단일 프로세스 실행
+          - 무한 창 생성 문제 해결
+          - 완전 독립 실행 (Python 설치 불필요)
+          - 모든 DNS 기능 완벽 지원
+          
+          🚀 사용법:
+          1. 본인의 운영체제에 맞는 파일 다운로드
+          2. 압축 해제
+          3. 실행 파일 더블클릭으로 실행
+          
+          📱 지원 플랫폼:
+          - Windows 10 이상
+          - macOS 10.13 이상
+          - Linux (Ubuntu 18.04 이상)
+          
+          🔧 개발자용:
+          - 소스 코드: https://github.com/hoongi7/NetworkOptimizer
+          - 빌드 가이드: [CROSS_PLATFORM_BUILD_GUIDE.md](CROSS_PLATFORM_BUILD_GUIDE.md)
+        draft: false
+        prerelease: false
+
+    - name: Upload macOS Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/macos-build/NetworkOptimizer-macOS-v3.0.0.zip
+        asset_name: NetworkOptimizer-macOS-v3.0.0.zip
+        asset_content_type: application/zip
+
+    - name: Upload Windows Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/windows-build/NetworkOptimizer-Windows-v3.0.0.zip
+        asset_name: NetworkOptimizer-Windows-v3.0.0.zip
+        asset_content_type: application/zip
+
+    - name: Upload Linux Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/linux-build/NetworkOptimizer-Linux-v3.0.0.tar.gz
+        asset_name: NetworkOptimizer-Linux-v3.0.0.tar.gz
+        asset_content_type: application/gzip

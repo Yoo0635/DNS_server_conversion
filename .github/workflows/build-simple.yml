@@ -1,0 +1,138 @@
+name: Build Cross Platform
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install PyInstaller
+    
+    - name: Build macOS app
+      run: |
+        python -m PyInstaller NetworkOptimizer-macOS.spec --noconfirm
+    
+    - name: Create macOS archive
+      run: |
+        zip -r NetworkOptimizer-macOS-v3.0.2.zip dist/NetworkOptimizer-macOS.app
+    
+    - name: Upload macOS artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: macos-build
+        path: NetworkOptimizer-macOS-v3.0.2.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install PyInstaller
+    
+    - name: Build Windows app
+      run: |
+        python -m PyInstaller NetworkOptimizer-Windows.spec --noconfirm
+    
+    - name: Create Windows archive
+      run: |
+        Compress-Archive -Path "dist\NetworkOptimizer-Windows" -DestinationPath "NetworkOptimizer-Windows-v3.0.2.zip"
+    
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: windows-build
+        path: NetworkOptimizer-Windows-v3.0.2.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install PyInstaller
+    
+    - name: Build Linux app
+      run: |
+        python -m PyInstaller NetworkOptimizer-Linux.spec --noconfirm
+        chmod +x dist/NetworkOptimizer-Linux
+    
+    - name: Create Linux archive
+      run: |
+        tar -czf NetworkOptimizer-Linux-v3.0.2.tar.gz -C dist NetworkOptimizer-Linux
+    
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux-build
+        path: NetworkOptimizer-Linux-v3.0.2.tar.gz
+
+  release:
+    needs: [build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./artifacts
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/macos-build/NetworkOptimizer-macOS-v3.0.2.zip
+          artifacts/windows-build/NetworkOptimizer-Windows-v3.0.2.zip
+          artifacts/linux-build/NetworkOptimizer-Linux-v3.0.2.tar.gz
+        body: |
+          🌐 Network Optimizer v3.0.2 - 크로스 플랫폼 릴리즈
+          
+          ✨ 새로운 기능:
+          - 안정적인 단일 프로세스 실행
+          - 무한 창 생성 문제 해결
+          - 완전 독립 실행 (Python 설치 불필요)
+          - 모든 DNS 기능 완벽 지원
+          
+          🚀 사용법:
+          1. 본인의 운영체제에 맞는 파일 다운로드
+          2. 압축 해제
+          3. 실행 파일 더블클릭으로 실행
+          
+          📱 지원 플랫폼:
+          - Windows 10 이상
+          - macOS 10.13 이상
+          - Linux (Ubuntu 18.04 이상)
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

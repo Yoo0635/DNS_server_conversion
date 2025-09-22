@@ -54,6 +54,7 @@ jobs:
         else
           python -m PyInstaller ${{ matrix.spec_file }} --noconfirm
         fi
+      shell: bash
 
     - name: Create archive
       run: |
@@ -64,6 +65,7 @@ jobs:
         else
           zip -r ${{ matrix.archive_name }} dist/${{ matrix.output_name }}.app
         fi
+      shell: bash
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3

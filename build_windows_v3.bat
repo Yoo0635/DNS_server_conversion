@@ -1,14 +1,20 @@
 @echo off
 chcp 65001 > nul
 
-REM Network Optimizer v3.0.0 - Windows용 빌드 스크립트
+REM Network Optimizer v3.1.0 - Windows용 빌드 스크립트 (개선된 버전)
 
-SET VERSION=3.0.0
+SET VERSION=3.1.0
 SET APP_NAME=NetworkOptimizer-Windows
 SET SPEC_FILE=NetworkOptimizer-Windows.spec
 
-echo 🌐 %APP_NAME% v%VERSION% - Windows용 빌드
+echo 🌐 %APP_NAME% v%VERSION% - Windows용 빌드 (개선된 버전)
 echo ================================================
+echo ✨ 새로운 기능:
+echo    - 즉시 표시되는 스플래시 화면
+echo    - 실제 백엔드 상태 확인
+echo    - 최적화된 시작 시간
+echo    - 향상된 사용자 경험
+echo.
 
 echo 🔍 현재 플랫폼: Windows
 
@@ -70,8 +76,19 @@ echo    1. Windows에서 dist\%APP_NAME%.exe 더블클릭
 echo    2. 또는 dist\%APP_NAME%\ 폴더 전체를 Windows로 복사
 echo.
 echo ✨ 특징:
+echo    - 즉시 표시되는 스플래시 화면
+echo    - 실제 백엔드 상태 확인 (3초 → 최대 8초)
+echo    - 최적화된 시작 시간
+echo    - 향상된 사용자 경험
 echo    - 완전 독립 실행 (Python 설치 불필요)
 echo    - 안정적인 단일 프로세스
 echo    - 모든 DNS 기능 지원
+echo    - Windows 네이티브 지원
+echo.
+echo 🎯 사용자 경험 개선:
+echo    - 앱 더블클릭 시 즉시 스플래시 화면 표시
+echo    - 로딩 진행 상황 실시간 표시
+echo    - 예상 시간 안내
+echo    - 혼란 최소화
 echo.
 PAUSE

@@ -1,14 +1,22 @@
-from typing import Optional
-from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit,
-    QApplication, QSpinBox, QComboBox, QDialog, QVBoxLayout, QHBoxLayout,
-    QMessageBox, QInputDialog
-)
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
-import api_client
-from pyqt_charts import canvas_dns, canvas_ip
+"""
+Network Performance Optimizer - Main Window
+PyQt5 기반 메인 윈도우 UI
+"""
+
 import sys
 import os
+from typing import Optional
+
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QLineEdit,
+    QApplication, QSpinBox, QComboBox, QDialog, QMessageBox
+)
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+
+import api_client
+from pyqt_charts import canvas_dns, canvas_ip
+
+# Backend 모듈 경로 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'backend'))
 from admin_check import AdminChecker
 
@@ -40,18 +48,22 @@ class AdminPasswordDialog(QDialog):
         self.setModal(True)
         self.resize(400, 200)
         self.setStyleSheet(QSS)
-        
+        self._setup_ui()
+    
+    def _setup_ui(self):
+        """UI 구성"""
         layout = QVBoxLayout(self)
         
         # 설명 라벨
-        info_label = QLabel("""
+        info_text = """
         🔐 DNS 설정을 위해 관리자 권한이 필요합니다.
         
         관리자 비밀번호를 입력해주세요.
         (비밀번호는 화면에 표시되지 않습니다)
         
         ⚠️ 주의: 이 프로그램은 안전한 DNS 서버만 사용합니다.
-        """)
+        """
+        info_label = QLabel(info_text)
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
         
@@ -59,128 +71,180 @@ class AdminPasswordDialog(QDialog):
         self.password_edit = QLineEdit()
         self.password_edit.setEchoMode(QLineEdit.Password)
         self.password_edit.setPlaceholderText("관리자 비밀번호를 입력하세요")
+        self.password_edit.returnPressed.connect(self.accept)
         layout.addWidget(self.password_edit)
         
         # 버튼
         button_layout = QHBoxLayout()
-        self.ok_button = QPushButton("확인")
-        self.cancel_button = QPushButton("취소")
+        ok_button = QPushButton("확인")
+        cancel_button = QPushButton("취소")
         
-        self.ok_button.clicked.connect(self.accept)
-        self.cancel_button.clicked.connect(self.reject)
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
         
-        button_layout.addWidget(self.ok_button)
-        button_layout.addWidget(self.cancel_button)
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
         layout.addLayout(button_layout)
-        
-        # 엔터키로 확인
-        self.password_edit.returnPressed.connect(self.accept)
     
-    def get_password(self):
+    def get_password(self) -> str:
         """입력된 비밀번호 반환"""
         return self.password_edit.text()
 
 
 class ApiWorker(QThread):
+    """API 호출을 위한 백그라운드 워커"""
+    
     done = pyqtSignal(dict)
+    
     def __init__(self, kind: str, domain: str = "", count: int = 3, server_name: str = ""):
         super().__init__()
         self.kind = kind
         self.domain = domain
         self.count = count
         self.server_name = server_name
+    
     def run(self):
-        if self.kind == 'dns':
-            data = api_client.get_dns_measurements(self.domain, self.count)
-        elif self.kind == 'ip':
-            data = api_client.get_fastest_ip(self.domain)
-        elif self.kind == 'analysis':
-            # 분석은 먼저 DNS 결과를 받아 전달하고, IP는 UI 스레드에서 후속 호출
-            data = api_client.get_dns_measurements(self.domain, self.count)
-        elif self.kind == 'apply_dns':
-            data = api_client.apply_dns_server(self.server_name)
-        elif self.kind == 'reset_dns':
-            data = api_client.reset_dns_server()
-        else:
-            data = {'error': 'unknown kind'}
-        self.done.emit(data or {'error': 'empty response'})
+        """API 호출 실행"""
+        try:
+            if self.kind == 'dns':
+                data = api_client.get_dns_measurements(self.domain, self.count)
+            elif self.kind == 'ip':
+                data = api_client.get_fastest_ip(self.domain)
+            elif self.kind == 'analysis':
+                # 분석은 먼저 DNS 결과를 받아 전달
+                data = api_client.get_dns_measurements(self.domain, self.count)
+            elif self.kind == 'apply_dns':
+                data = api_client.apply_dns_server(self.server_name)
+            elif self.kind == 'reset_dns':
+                data = api_client.reset_dns_server()
+            else:
+                data = {'error': 'unknown kind'}
+            
+            self.done.emit(data or {'error': 'empty response'})
+        except Exception as e:
+            self.done.emit({'error': str(e)})
 
 
 class MainWindow(QWidget):
+    """메인 윈도우 클래스"""
+    
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Network Performance Optimizer (PyQt5)')
+        self._worker: Optional[ApiWorker] = None
+        self._setup_window()
+        self._setup_ui()
+        self._connect_signals()
+        self.update_admin_status()
+    
+    def _setup_window(self):
+        """윈도우 기본 설정"""
+        self.setWindowTitle('Network Performance Optimizer v3.1.0')
         self.setStyleSheet(QSS)
         self.resize(1100, 700)
-
-        self._worker: Optional[ApiWorker] = None
-
+    
+    def _setup_ui(self):
+        """UI 구성"""
         root = QVBoxLayout(self)
-
-        # Top controls
-        top = QHBoxLayout()
-        self.url_edit = QLineEdit(self)
-        self.url_edit.setPlaceholderText('Target URL (e.g., https://tickets.interpark.com/goods/25005777)')
-        self.apply_url_btn = QPushButton('Apply URL', self)
-        self.apply_url_btn.clicked.connect(self.on_apply_url)
-        self.domain_edit = QLineEdit(self)
-        self.domain_edit.setPlaceholderText('Domain (e.g., tickets.interpark.com)')
-        self.count_spin = QSpinBox(self)
+        
+        # 상단 컨트롤
+        root.addLayout(self._create_top_controls())
+        
+        # DNS 서버 선택
+        root.addLayout(self._create_dns_section())
+        
+        # 버튼들
+        root.addLayout(self._create_button_section())
+        
+        # 상태 표시
+        root.addWidget(self._create_status_section())
+        
+        # 차트 영역
+        self.chart_host = QVBoxLayout()
+        self.chart_host.setSpacing(20)
+        root.addLayout(self.chart_host, 1)
+    
+    def _create_top_controls(self) -> QHBoxLayout:
+        """상단 컨트롤 생성"""
+        layout = QHBoxLayout()
+        
+        self.url_edit = QLineEdit()
+        self.url_edit.setPlaceholderText('Target URL (e.g., https://example.com)')
+        
+        self.apply_url_btn = QPushButton('Apply URL')
+        
+        self.domain_edit = QLineEdit()
+        self.domain_edit.setPlaceholderText('Domain (e.g., example.com)')
+        
+        self.count_spin = QSpinBox()
         self.count_spin.setRange(1, 20)
         self.count_spin.setValue(3)
-        top.addWidget(self.url_edit, 3)
-        top.addWidget(self.apply_url_btn)
-        top.addWidget(self.domain_edit, 2)
-        top.addWidget(QLabel('Count:', self))
-        top.addWidget(self.count_spin)
-
-        # DNS Server Selection
-        dns_section = QHBoxLayout()
-        dns_section.addWidget(QLabel('DNS Server:', self))
-        self.dns_combo = QComboBox(self)
+        
+        layout.addWidget(self.url_edit, 3)
+        layout.addWidget(self.apply_url_btn)
+        layout.addWidget(self.domain_edit, 2)
+        layout.addWidget(QLabel('Count:'))
+        layout.addWidget(self.count_spin)
+        
+        return layout
+    
+    def _create_dns_section(self) -> QHBoxLayout:
+        """DNS 서버 선택 섹션 생성"""
+        layout = QHBoxLayout()
+        
+        layout.addWidget(QLabel('DNS Server:'))
+        
+        self.dns_combo = QComboBox()
         self.dns_combo.addItems(['Google', 'KT', 'SKB', 'LGU', 'KISA'])
         self.dns_combo.setCurrentText('Google')
-        self.btn_apply_dns = QPushButton('Apply DNS', self)
-        self.btn_reset_dns = QPushButton('Reset DNS', self)
-        self.btn_apply_dns.clicked.connect(self.click_apply_dns)
-        self.btn_reset_dns.clicked.connect(self.click_reset_dns)
-        dns_section.addWidget(self.dns_combo)
-        dns_section.addWidget(self.btn_apply_dns)
-        dns_section.addWidget(self.btn_reset_dns)
-        dns_section.addStretch()
-
-        # Buttons
-        btns = QHBoxLayout()
-        self.btn_dns = QPushButton('DNS Server Response Time', self)
-        self.btn_quick = QPushButton('Quick Test (1x)', self)
-        self.btn_ip = QPushButton('IP Response Speed Test', self)
-        self.btn_analysis = QPushButton('Comprehensive Analysis', self)
-        for b in (self.btn_dns, self.btn_quick, self.btn_ip, self.btn_analysis):
-            btns.addWidget(b)
-
+        
+        self.btn_apply_dns = QPushButton('Apply DNS')
+        self.btn_reset_dns = QPushButton('Reset DNS')
+        
+        layout.addWidget(self.dns_combo)
+        layout.addWidget(self.btn_apply_dns)
+        layout.addWidget(self.btn_reset_dns)
+        layout.addStretch()
+        
+        return layout
+    
+    def _create_button_section(self) -> QHBoxLayout:
+        """버튼 섹션 생성"""
+        layout = QHBoxLayout()
+        
+        self.btn_dns = QPushButton('DNS Server Response Time')
+        self.btn_quick = QPushButton('Quick Test (1x)')
+        self.btn_ip = QPushButton('IP Response Speed Test')
+        self.btn_analysis = QPushButton('Comprehensive Analysis')
+        
+        for btn in (self.btn_dns, self.btn_quick, self.btn_ip, self.btn_analysis):
+            layout.addWidget(btn)
+        
+        return layout
+    
+    def _create_status_section(self) -> QWidget:
+        """상태 표시 섹션 생성"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        self.status = QLabel('Ready - Enter URL then Apply')
+        self.status.setObjectName('status')
+        
+        self.admin_status = QLabel('')
+        
+        layout.addWidget(self.status)
+        layout.addWidget(self.admin_status)
+        
+        return widget
+    
+    def _connect_signals(self):
+        """시그널 연결"""
+        self.apply_url_btn.clicked.connect(self.on_apply_url)
         self.btn_dns.clicked.connect(self.click_dns)
         self.btn_quick.clicked.connect(self.click_quick)
         self.btn_ip.clicked.connect(self.click_ip)
         self.btn_analysis.clicked.connect(self.click_analysis)
-
-        # Status
-        self.status = QLabel('Ready - Enter URL then Apply', self)
-        self.status.setObjectName('status')
-        
-        # Admin status
-        self.admin_status = QLabel('', self)
-        self.update_admin_status()
-
-        # Chart area with spacing for multiple graphs
-        self.chart_host = QVBoxLayout()
-        self.chart_host.setSpacing(20)  # 그래프 간 간격 추가
-
-        root.addLayout(top)
-        root.addLayout(dns_section)
-        root.addLayout(btns)
-        root.addWidget(self.status)
-        root.addWidget(self.admin_status)
-        root.addLayout(self.chart_host, 1)
+        self.btn_apply_dns.clicked.connect(self.click_apply_dns)
+        self.btn_reset_dns.clicked.connect(self.click_reset_dns)
 
     def set_status(self, text: str, ok: bool = True):
         self.status.setText(text)

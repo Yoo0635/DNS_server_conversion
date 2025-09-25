@@ -1,13 +1,20 @@
 #!/bin/bash
 
-# Network Optimizer v3.0.0 - macOS용 빌드 스크립트
+# Network Optimizer v3.1.0 - 개선된 macOS용 빌드 스크립트
+# 로딩 시간 최적화 및 스플래시 화면 추가
 
-VERSION="3.0.0"
+VERSION="3.1.0"
 APP_NAME="NetworkOptimizer-macOS"
 SPEC_FILE="NetworkOptimizer-macOS.spec"
 
-echo "🌐 $APP_NAME v$VERSION - macOS용 빌드"
+echo "🌐 $APP_NAME v$VERSION - 개선된 macOS용 빌드"
 echo "============================================"
+echo "✨ 새로운 기능:"
+echo "   - 즉시 표시되는 스플래시 화면"
+echo "   - 실제 백엔드 상태 확인"
+echo "   - 최적화된 시작 시간"
+echo "   - 향상된 사용자 경험"
+echo ""
 
 # 현재 플랫폼 확인 (macOS에서만 실행)
 if [[ "$OSTYPE" != "darwin"* ]]; then
@@ -56,7 +63,7 @@ fi
 echo "🧹 이전 빌드 파일 정리..."
 rm -rf build dist
 
-echo "🔨 macOS용 빌드 중..."
+echo "🔨 개선된 macOS용 빌드 중..."
 
 # PyInstaller 실행
 $PYTHON_CMD -m PyInstaller "$SPEC_FILE" --noconfirm
@@ -66,7 +73,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "🎉 macOS 빌드 완료!"
+echo "🎉 개선된 macOS 빌드 완료!"
 echo "📁 빌드 결과: dist/ 폴더를 확인하세요"
 echo ""
 echo "📦 생성된 파일:"
@@ -76,9 +83,20 @@ echo "🚀 사용 방법:"
 echo "   1. dist/$APP_NAME.app 더블클릭"
 echo "   2. 또는 터미널: open dist/$APP_NAME.app"
 echo ""
-echo "✨ 특징:"
+echo "✨ 개선된 특징:"
+echo "   - 즉시 표시되는 스플래시 화면"
+echo "   - 실제 백엔드 상태 확인 (3초 → 최대 8초)"
+echo "   - 최적화된 시작 시간"
+echo "   - 향상된 사용자 경험"
 echo "   - 완전 독립 실행 (Python 설치 불필요)"
 echo "   - 안정적인 단일 프로세스"
 echo "   - 모든 DNS 기능 지원"
 echo "   - macOS 네이티브 .app 번들"
 echo ""
+echo "🎯 사용자 경험 개선:"
+echo "   - 앱 더블클릭 시 즉시 스플래시 화면 표시"
+echo "   - 로딩 진행 상황 실시간 표시"
+echo "   - 예상 시간 안내"
+echo "   - 혼란 최소화"
+echo ""
+

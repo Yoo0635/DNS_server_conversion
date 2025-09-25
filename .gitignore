@@ -99,45 +99,23 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Linux
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 *~
 
-# Build artifacts
-*.app
-*.exe
-*.dmg
-*.pkg
-*.deb
-*.rpm
-dist/
-build/
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Large files
-*.zip
-*.tar.gz
-*.7z
-
-# CSV output files
+# Network Optimizer specific
 *.csv
-
-# Log files
-*.log
-
-# Temporary files
-*.tmp
-*.temp
-
-# Network-Project subfolder (legacy)
-Network-Project/
-Network-Project/releases/
-Network-Project/dist/
+dns_응답속도_결과.csv
+ip_응답속도_결과.csv

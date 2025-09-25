@@ -138,7 +138,7 @@ class MainWindow(QWidget):
     
     def _setup_window(self):
         """윈도우 기본 설정"""
-        self.setWindowTitle('Network Performance Optimizer v3.1.0')
+        self.setWindowTitle('Network Performance Optimizer v1.0.0')
         self.setStyleSheet(QSS)
         self.resize(1100, 700)
     

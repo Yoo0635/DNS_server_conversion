@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Network Performance Optimizer API",
     description="DNS 및 IP 응답 속도 측정을 위한 API",
-    version="3.1.0"
+    version="1.0.0"
 )
 
 # CORS 설정
@@ -48,7 +48,7 @@ def root():
     """API 루트 엔드포인트"""
     return {
         "message": "Network Performance Optimizer API",
-        "version": "3.1.0",
+        "version": "1.0.0",
         "features": [
             "DNS 성능 측정",
             "IP 응답 속도 측정", 
@@ -70,7 +70,7 @@ def health_check():
     return {
         "status": "healthy", 
         "service": "Network Performance Optimizer",
-        "version": "3.1.0"
+        "version": "1.0.0"
     }
 
 if __name__ == "__main__":

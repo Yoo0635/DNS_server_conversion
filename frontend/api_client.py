@@ -7,8 +7,7 @@ from typing import Dict, List, Optional
 import platform
 import os
 
-# 로깅 설정
-logging.basicConfig(level=logging.INFO)
+# 로깅 설정 (기본 설정이 이미 있으면 건너뛰기)
 logger = logging.getLogger(__name__)
 
 class NetworkAPIClient:

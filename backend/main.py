@@ -12,11 +12,7 @@ from routers.dns_apply import router as dns_apply_router
 from routers.dns_reset import router as dns_reset_router
 from routers.ip_measure import router as ip_measure_router
 
-# 로깅 설정
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# 로깅 설정 (기본 설정이 이미 있으면 건너뛰기)
 logger = logging.getLogger(__name__)
 
 # FastAPI 앱 생성

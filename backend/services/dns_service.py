@@ -3,10 +3,12 @@ import subprocess
 import logging
 from typing import Optional
 from schemas.dns_models import DNSIpRequest
-from admin_check import AdminChecker
+# AdminChecker 제거됨 - UAC로 대체
+import ctypes
+import sys
+import re
 
-# 로깅 설정
-logging.basicConfig(level=logging.INFO)
+# 로깅 설정 (기본 설정이 이미 있으면 건너뛰기)
 logger = logging.getLogger(__name__)
 
 class DNSService:
@@ -14,25 +16,48 @@ class DNSService:
     
     @staticmethod
     def detect_adapter_win() -> str:
-        """Windows 네트워크 어댑터 탐지"""
+        """Windows 네트워크 어댑터 탐지 (Loopback 제외, 연결된 실제 어댑터 우선)"""
         try:
+            # 인터페이스 상태를 더 풍부하게 제공
             result = subprocess.run(
                 'netsh interface show interface',
-                shell=True, 
-                capture_output=True, 
-                text=True, 
-                encoding='utf-8'
+                shell=True,
+                capture_output=True
             )
+            def _dec(b):
+                return (b.decode('cp949', errors='ignore') if isinstance(b, (bytes, bytearray)) else b) or ''
+            stdout = _dec(result.stdout)
+            stderr = _dec(result.stderr)
             
             if result.returncode != 0:
-                raise Exception(f"Windows 어댑터 탐지 실패: {result.stderr}")
+                raise Exception(f"Windows 어댑터 탐지 실패: {stderr}")
             
-            lines = result.stdout.splitlines()
+            lines = stdout.splitlines() if stdout else []
+            candidates = []
             for line in lines:
-                if "Connected" in line or "연결됨" in line:
-                    adapter_name = line.strip().split()[-1]
-                    logger.info(f"Windows 어댑터 감지: {adapter_name}")
-                    return adapter_name
+                if not line.strip() or line.lower().startswith('admin'):
+                    continue
+                # 컬럼: Admin State  State   Type    Interface Name
+                parts = line.split()
+                if len(parts) < 4:
+                    continue
+                # 이름은 4번째 이후 전체
+                name = ' '.join(parts[3:]).strip()
+                state = ' '.join(parts[1:3]).lower()
+                if (('connected' in state) or ('연결됨' in state)) and ('loopback' not in name.lower()) and ('pseudo' not in name.lower()):
+                    candidates.append(name)
+            # 우선순위: Ethernet/이더넷 > Wi-Fi/무선 > 그 외
+            def score(n: str) -> int:
+                nl = n.lower()
+                if 'ethernet' in nl or '이더넷' in nl:
+                    return 3
+                if 'wi-fi' in nl or 'wifi' in nl or '무선' in nl or 'wlan' in nl:
+                    return 2
+                return 1
+            if candidates:
+                adapter_name = sorted(candidates, key=lambda x: -score(x))[0]
+                logger.info(f"Windows 어댑터 감지: {adapter_name}")
+                return adapter_name
             
             raise Exception("Windows 어댑터 이름을 찾을 수 없습니다.")
             
@@ -101,6 +126,11 @@ class DNSService:
         try:
             if os_name == "Windows":
                 adapter = DNSService.detect_adapter_win()
+                # 현재 DNS가 동일하면 변경 생략 (OS 권한 팝업 최소화)
+                current = DNSService.get_current_dns()
+                if current and current.strip() == dns_ip.strip():
+                    logger.info(f"현재 DNS가 이미 {dns_ip} 이므로 변경을 생략합니다.")
+                    return True
                 command = f'netsh interface ip set dns name="{adapter}" static {dns_ip}'
                 
             elif os_name == "Darwin":  # macOS
@@ -116,22 +146,30 @@ class DNSService:
             
             logger.info(f"실행 명령어: {command}")
             result = subprocess.run(
-                command, 
-                shell=True, 
-                capture_output=True, 
-                text=True, 
-                encoding="utf-8",
-                timeout=30  # 30초 타임아웃 추가
+                command,
+                shell=True,
+                capture_output=True,
+                timeout=30
             )
+            def _dec(b):
+                return (b.decode('cp949', errors='ignore') if isinstance(b, (bytes, bytearray)) else b) or ''
+            stdout = _dec(result.stdout)
+            stderr = _dec(result.stderr)
             
             logger.info(f"명령어 실행 결과 - returncode: {result.returncode}")
-            logger.info(f"stdout: {result.stdout}")
-            logger.info(f"stderr: {result.stderr}")
+            logger.info(f"stdout: {stdout}")
+            logger.info(f"stderr: {stderr}")
             
             if result.returncode != 0:
-                error_msg = f"DNS 설정 실패: {result.stderr.strip()}"
-                logger.error(error_msg)
-                raise Exception(error_msg)
+                # 권한 부족 메시지면 UAC로 명령만 승격 실행 (원래 창 유지)
+                if ('권한 상승' in (stdout + stderr)) or ('elevation' in (stdout + stderr).lower()) or ('access is denied' in (stdout + stderr).lower()):
+                    exit_code = DNSService._run_elevated_netsh(f'interface ip set dns name="{adapter}" static {dns_ip}')
+                    if exit_code != 0:
+                        raise Exception("DNS 설정 실패(승격 시도 후)")
+                else:
+                    error_msg = f"DNS 설정 실패: {stderr.strip()}"
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
             
             logger.info(f"DNS 설정 성공: {dns_ip}")
             return True
@@ -173,17 +211,24 @@ class DNSService:
             
             logger.info(f"실행 명령어: {command}")
             result = subprocess.run(
-                command, 
-                shell=True, 
-                capture_output=True, 
-                text=True, 
-                encoding="utf-8"
+                command,
+                shell=True,
+                capture_output=True
             )
+            def _dec(b):
+                return (b.decode('cp949', errors='ignore') if isinstance(b, (bytes, bytearray)) else b) or ''
+            stdout = _dec(result.stdout)
+            stderr = _dec(result.stderr)
             
             if result.returncode != 0:
-                error_msg = f"DNS 리셋 실패: {result.stderr.strip()}"
-                logger.error(error_msg)
-                raise Exception(error_msg)
+                if ('권한 상승' in (stdout + stderr)) or ('elevation' in (stdout + stderr).lower()) or ('access is denied' in (stdout + stderr).lower()):
+                    exit_code = DNSService._run_elevated_netsh(f'interface ip set dns name="{adapter}" dhcp')
+                    if exit_code != 0:
+                        raise Exception("DNS 리셋 실패(승격 시도 후)")
+                else:
+                    error_msg = f"DNS 리셋 실패: {stderr.strip()}"
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
             
             logger.info("DNS 리셋 성공")
             return True
@@ -191,6 +236,52 @@ class DNSService:
         except Exception as e:
             logger.error(f"DNS 리셋 중 오류: {e}")
             raise
+
+    @staticmethod
+    def _run_elevated_netsh(arguments: str) -> int:
+        """UAC로 netsh만 승격 실행하여 원래 창을 유지. 종료코드 반환."""
+        try:
+            SHELLEXECUTEINFOW = ctypes.c_buffer
+            ShellExecuteEx = ctypes.windll.shell32.ShellExecuteExW
+            SEE_MASK_NOCLOSEPROCESS = 0x00000040
+            class SHELLEXECUTEINFO(ctypes.Structure):
+                _fields_ = [
+                    ("cbSize", ctypes.c_ulong),
+                    ("fMask", ctypes.c_ulong),
+                    ("hwnd", ctypes.c_void_p),
+                    ("lpVerb", ctypes.c_wchar_p),
+                    ("lpFile", ctypes.c_wchar_p),
+                    ("lpParameters", ctypes.c_wchar_p),
+                    ("lpDirectory", ctypes.c_wchar_p),
+                    ("nShow", ctypes.c_int),
+                    ("hInstApp", ctypes.c_void_p),
+                    ("lpIDList", ctypes.c_void_p),
+                    ("lpClass", ctypes.c_wchar_p),
+                    ("hkeyClass", ctypes.c_void_p),
+                    ("dwHotKey", ctypes.c_ulong),
+                    ("hIcon", ctypes.c_void_p),
+                    ("hProcess", ctypes.c_void_p),
+                ]
+            info = SHELLEXECUTEINFO()
+            info.cbSize = ctypes.sizeof(SHELLEXECUTEINFO)
+            info.fMask = SEE_MASK_NOCLOSEPROCESS
+            info.hwnd = None
+            info.lpVerb = "runas"
+            info.lpFile = "netsh"
+            info.lpParameters = arguments
+            info.lpDirectory = None
+            info.nShow = 1
+            if not ShellExecuteEx(ctypes.byref(info)):
+                return 1
+            # 대기 및 종료코드 확인
+            kernel32 = ctypes.windll.kernel32
+            kernel32.WaitForSingleObject(info.hProcess, 60_000)
+            exit_code = ctypes.c_ulong()
+            if kernel32.GetExitCodeProcess(info.hProcess, ctypes.byref(exit_code)) == 0:
+                return 1
+            return int(exit_code.value)
+        except Exception:
+            return 1
     
     @staticmethod
     def get_current_dns() -> Optional[str]:
@@ -199,18 +290,21 @@ class DNSService:
         
         try:
             if os_name == "Windows":
-                result = subprocess.run(
+                # nslookup 출력에서 Address 라인을 우선적으로 파싱 (해석된 DNS IP)
+                proc = subprocess.run(
                     'nslookup google.com',
                     shell=True,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8'
+                    capture_output=True
                 )
-                # Windows nslookup 결과에서 DNS 서버 추출
-                lines = result.stdout.splitlines()
-                for line in lines:
-                    if "Server:" in line:
-                        return line.split(":")[1].strip()
+                def _dec(b):
+                    return (b.decode('cp949', errors='ignore') if isinstance(b, (bytes, bytearray)) else b) or ''
+                out = _dec(proc.stdout)
+                # 예: Address:  8.8.8.8 또는 Addresses: 8.8.8.8
+                for line in out.splitlines():
+                    m = re.search(r'Address(?:es)?:\s*([0-9]{1,3}(?:\.[0-9]{1,3}){3})', line)
+                    if m:
+                        return m.group(1)
+                # 보조: Server 라인이 도메인명일 수 있어 IP가 없으면 None
                         
             elif os_name == "Darwin":
                 result = subprocess.run(

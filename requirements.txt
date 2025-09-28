@@ -1,0 +1,21 @@
+# Network Performance Optimizer v3.1.0 - Dependencies
+
+# Core Backend
+fastapi==0.116.0
+uvicorn==0.35.0
+pydantic==2.11.7
+
+# Network & DNS
+dnspython==2.7.0
+requests==2.32.4
+
+# Data Processing
+pandas==2.3.1
+numpy==2.3.1
+
+# Frontend GUI
+PyQt5==5.15.11
+matplotlib>=3.8.0
+
+# Build & Distribution
+PyInstaller>=6.0.0

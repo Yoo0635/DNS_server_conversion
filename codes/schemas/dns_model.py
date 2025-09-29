@@ -15,17 +15,6 @@ class dnsNameRequest(BaseModel): # DNS 서버 이름 유효성 검사
             raise ValueError(f"'{value}'는 유효한 DNS 서버가 아닙니다.")
         return clean
 
-class dnsDomainRequest(BaseModel):
-    domain: Annotated[
-        str, 
-        StringConstraints(
-            strip_whitespace=True,
-            min_length=3,
-            max_length=253,
-            pattern=r"^(?!-)[A-Za-z0-9.-]+(?<!-)$" # 정규표현식
-        )
-    ]
-
 class statusResponse(BaseModel):
     message : str
 
